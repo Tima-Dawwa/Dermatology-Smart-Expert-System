@@ -1,4 +1,4 @@
-from experta import Fact, Field
+from experta import *
 import collections
 import collections.abc
 collections.Mapping = collections.abc.Mapping
@@ -40,3 +40,18 @@ class Diagnosis(Fact):
     """
     disease = Field(str, mandatory=True)     # e.g., 'Eczema'
     reasoning = Field(str, default=None)  # why this diagnosis was selected
+
+
+class DiseaseInfo(Fact):
+    """A full disease profile loaded from JSON."""
+    name = Field(str, mandatory=True)
+    # {"required": [...], "optional": [...]}
+    common_symptoms = Field(dict, mandatory=True)
+    affected_gender = Field(str, mandatory=False)
+    common_age_range = Field(str, mandatory=False)
+    common_locations = Field(list, mandatory=False)
+    severity_levels = Field(list, mandatory=False)
+    common_duration = Field(str, mandatory=False)
+    triggers = Field(list, mandatory=False)
+    common_treatments = Field(list, mandatory=False)
+    notes = Field(str, mandatory=False)
