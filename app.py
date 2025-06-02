@@ -1,5 +1,6 @@
-from ExpertSystem.facts import Symptom, ImageDiagnosis, PatientProfile, DiseaseInfo
-from ExpertSystem.engine import DermatologyExpertSystem
+import sys
+from ExpertSystem.facts import *
+from ExpertSystem.engine import DermatologyExpert
 import os
 import json
 import collections
@@ -8,33 +9,48 @@ from experta import *
 
 collections.Mapping = collections.abc.Mapping
 
-json_path = os.path.abspath('Data/diseases.json')
 
-with open(json_path, "r") as f:
-    disease_data = json.load(f)
+def cli_main():
+    try:
+        raw_input = sys.stdin.read()
+        data = json.loads(raw_input)
 
-print(type(disease_data))
+        engine = DermatologyExpert()
+        engine.reset()
 
-engine = DermatologyExpertSystem()
-engine.reset()
+        for key, val in data["answers"].items():
+            engine.declare(Fact(ask=key))
+            engine.declare(Answer(ident=key, text=val))
 
-diseases = disease_data["diseases"]
-for disease in diseases:
-    engine.declare(DiseaseInfo(**disease))
+        if "cv" in data:
+            cv = data["cv"]
+            engine.declare(ImageDiagnosis(
+                disease=cv["disease"], confidence=cv["confidence"]))
 
-engine.declare(PatientProfile(age=8, gender="female"))
-engine.declare(Symptom(name="itching"))
-engine.declare(Symptom(name="dry skin"))
-engine.declare(Symptom(name="red patches"))
-engine.declare(Fact(trigger="weather changes"))
-engine.declare(Symptom(name="some symptom", location="elbows"))
-symptom_names = {"itching", "dry skin", "red patches"}
-symptom_names = set()
-for fact in engine.facts.values():
-    if isinstance(fact, Symptom):
-        symptom_names.add(fact["name"])
-engine.declare(Fact(symptoms=symptom_names))
+        engine.run()
 
-engine.declare(ImageDiagnosis(disease="Atopic Dermatitis", confidence=0.9))
-engine.run()
-print("Diagnosis result:", engine.get_diagnosis())
+        for fact in engine.facts.values():
+            if isinstance(fact, Diagnosis):
+                result = {
+                    "disease": fact["disease"],
+                    "reasoning": fact["reasoning"],
+                    "confidence": fact["cf"]
+                }
+                print(json.dumps(result))
+                return
+
+        print(json.dumps({"error": "No confident diagnosis"}))
+
+    except Exception as e:
+        print(json.dumps({"error": str(e)}))
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == "--cli":
+        cli_main()
+    else:
+        engine = DermatologyExpert()
+        engine.reset()
+        engine.declare(Fact(next='itching'))
+        engine.run()
+        engine.get_final_diagnosis()
