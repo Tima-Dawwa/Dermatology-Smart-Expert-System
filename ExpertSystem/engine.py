@@ -686,7 +686,7 @@ class DermatologyExpert(KnowledgeEngine):
         )
 
     @Rule(
-        Answer(ident="redness", text=MATCH.response), salience=-10 ) 
+        Answer(ident="redness", text=MATCH.response), salience=-10)
     def trigger_final_diagnosis(self, response):
         self.declare(Fact(diagnosis_ready=True))
 
