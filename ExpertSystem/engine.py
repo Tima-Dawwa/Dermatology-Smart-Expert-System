@@ -333,9 +333,74 @@ class DermatologyExpert(KnowledgeEngine):
             notes="Often part of the “atopic triad” (with asthma and allergic rhinitis); worsens in dry environments.",
         )
 
+        yield DiseaseInfo(
+            name="Bullous Disease",
+            common_symptoms={"blisters": "high", "pain": "medium"},
+            affected_gender="any",
+            common_age_range="50+",
+            common_locations=["arms", "trunk", "legs"],
+            severity_levels=["moderate", "severe"],
+            common_duration="weeks to months",
+            triggers=["autoimmune response"],
+            common_treatments=["corticosteroids", "immunosuppressants"],
+            notes="Autoimmune blistering diseases such as pemphigoid or pemphigus."
+        )
+
+        yield DiseaseInfo(
+            name="Herpes / STDs",
+            common_symptoms={"blisters": "high", "pain": "high"},
+            affected_gender="any",
+            common_age_range="15-45",
+            common_locations=["genital area", "mouth", "buttocks"],
+            severity_levels=["mild", "moderate"],
+            common_duration="1-3 weeks (recurring)",
+            triggers=["viral infection (HSV/HPV)", "sexual contact"],
+            common_treatments=["antivirals (acyclovir)", "topical treatments"],
+            notes="Painful fluid-filled blisters caused by sexually transmitted viruses."
+        )
+
+        yield DiseaseInfo(
+            name="Systemic Disease",
+            common_symptoms={"joint_pain": "medium", "rash_location": "variable"},
+            affected_gender="any",
+            common_age_range="20-60",
+            common_locations=["face", "arms", "chest"],
+            severity_levels=["mild", "severe"],
+            common_duration="chronic",
+            triggers=["autoimmune disorder"],
+            common_treatments=["corticosteroids", "DMARDs", "immunotherapy"],
+            notes="Internal diseases like lupus or vasculitis with skin symptoms."
+        )
+
+        yield DiseaseInfo(
+            name="Vasculitis",
+            common_symptoms={"ulcer": "medium", "pain": "medium"},
+            affected_gender="any",
+            common_age_range="30-70",
+            common_locations=["legs", "feet", "fingers"],
+            severity_levels=["moderate", "severe"],
+            common_duration="weeks to chronic",
+            triggers=["autoimmune response", "infections"],
+            common_treatments=["corticosteroids", "immunosuppressants"],
+            notes="Inflammation of blood vessels causing skin ulcers and pain."
+        )
+
+        yield DiseaseInfo(
+            name="Malignant Skin Lesions",
+            common_symptoms={"ulcer": "high", "discoloration": "high"},
+            affected_gender="any",
+            common_age_range="40+",
+            common_locations=["face", "ears", "scalp", "hands"],
+            severity_levels=["moderate", "severe"],
+            common_duration="persistent / chronic",
+            triggers=["UV radiation", "aging", "genetics"],
+            common_treatments=["excision", "cryotherapy", "topical chemotherapy"],
+            notes="Includes Actinic Keratosis and Basal Cell Carcinoma — can progress to skin cancer."
+        )
+
+
         questions = [
             ("itching", "Is the skin itchy?"),
-            # Added missing dryness question
             ("dryness", "Is the skin dry or rough?"),
             ("scaling", "Is the skin scaly or flaky?"),
             ("redness", "Is the affected area red or inflamed?"),
@@ -359,6 +424,13 @@ class DermatologyExpert(KnowledgeEngine):
             ("joint_pain", "Do you have joint pain along with the rash?"),
             ("rash_between_fingers", "Is the rash between your fingers?"),
             ("rash_scalp", "Do you have flaking or redness on your scalp?"),
+            ("bleeding", "Is the lesion bleeding spontaneously?"),
+            ("enlarging_rapidly", "Has the lesion grown rapidly in size?"),
+            ("crusting_scalp", "Is there crusting or scaling on your scalp?"),
+            ("mucosal_involvement", "Are your lips, mouth or genitals also affected?"),
+            ("sun_exposure_area", "Is the lesion in a sun-exposed area?"),
+            ("history_cancer", "Do you have a personal or family history of cancer?"),
+            ("recurrence", "Has the rash appeared in the same area before?")
         ]
 
         for ident, text in questions:
@@ -379,9 +451,16 @@ class DermatologyExpert(KnowledgeEngine):
         NOT(Answer(ident=MATCH.next_q)),
     )
     def ask_next_question(self, next_q, text, valid, Type):
+        # Check if diagnosis already exists
+        for fact in self.facts.values():
+            if isinstance(fact, Diagnosis):
+                # Skip asking if diagnosis is already made
+                return
+
         response = self.ask_user(text, Type, valid)
         cf = 1.0 if response == "yes" else 0.0
         self.declare(Answer(ident=next_q, text=response, cf=cf))
+
 
     def ask_user(self, question_text, Type, valid=None):
         print("\n🧠 " + question_text)
@@ -420,6 +499,46 @@ class DermatologyExpert(KnowledgeEngine):
     def redness_answered(self, response):
         # Continue with more questions or end diagnosis
         self.declare(Fact(next="blisters"))
+    
+    @Rule(Answer(ident="blisters", text=MATCH.response))
+    def after_blisters(self, response):
+        self.declare(Fact(next="pain"))
+
+
+    @Rule(Answer(ident="pain", text=MATCH.response))
+    def after_pain(self, response):
+        self.declare(Fact(next="ulcer"))
+
+
+    @Rule(Answer(ident="ulcer", text=MATCH.response))
+    def after_ulcer(self, response):
+        self.declare(Fact(next="discoloration"))
+
+
+    @Rule(Answer(ident="discoloration", text=MATCH.response))
+    def after_discoloration(self, response):
+        self.declare(Fact(next="joint_pain"))
+
+
+    @Rule(Answer(ident="joint_pain", text=MATCH.response))
+    def after_joint_pain(self, response):
+        self.declare(Fact(next="bleeding"))
+
+
+    @Rule(Answer(ident="bleeding", text=MATCH.response))
+    def after_bleeding(self, response):
+        self.declare(Fact(next="enlarging_rapidly"))
+
+
+    @Rule(Answer(ident="enlarging_rapidly", text=MATCH.response))
+    def after_enlarging(self, response):
+        self.declare(Fact(next="mucosal_involvement"))
+
+
+    @Rule(Answer(ident="mucosal_involvement", text=MATCH.response))
+    def after_mucosal(self, response):
+        self.declare(Fact(next="sun_exposure_area"))
+
 
     def combine_cf(self, cf1, cf2):
         if cf1 >= 0 and cf2 >= 0:
@@ -508,6 +627,72 @@ class DermatologyExpert(KnowledgeEngine):
             f"Computer vision predicted Eczema with {conf:.2f} confidence",
             new_cf=conf,
         )
+    
+    @Rule(Answer(ident="blisters", text="yes", cf=MATCH.cf1),
+          Answer(ident="pain", text="yes", cf=MATCH.cf2))
+    def diagnose_bullous_disease(self, cf1, cf2):
+        cf = self.combine_cf(cf1, cf2)
+        self.declare_or_update_diagnosis(
+            disease="Bullous Disease",
+            reasoning="Blisters with pain suggest bullous autoimmune condition.",
+            new_cf=cf * 0.85
+        )
+
+
+    @Rule(Answer(ident="mucosal_involvement", text="yes", cf=MATCH.cf1),
+        Answer(ident="blisters", text="yes", cf=MATCH.cf2))
+    def diagnose_herpes_stds(self, cf1, cf2):
+        cf = self.combine_cf(cf1, cf2)
+        self.declare_or_update_diagnosis(
+            disease="Herpes or STD",
+            reasoning="Blisters affecting mucosal areas suggest HSV or similar STD.",
+            new_cf=cf * 0.9
+        )
+
+
+    @Rule(Answer(ident="joint_pain", text="yes", cf=MATCH.cf1),
+        Answer(ident="photosensitivity", text="yes", cf=MATCH.cf2))
+    def diagnose_systemic_disease(self, cf1, cf2):
+        cf = self.combine_cf(cf1, cf2)
+        self.declare_or_update_diagnosis(
+            disease="Systemic Disease",
+            reasoning="Joint pain with photosensitivity suggests autoimmune systemic disease.",
+            new_cf=cf * 0.8
+        )
+
+
+    @Rule(Answer(ident="ulcer", text="yes", cf=MATCH.cf1),
+        Answer(ident="discoloration", text="yes", cf=MATCH.cf2))
+    def diagnose_vasculitis(self, cf1, cf2):
+        cf = self.combine_cf(cf1, cf2)
+        self.declare_or_update_diagnosis(
+            disease="Vasculitis",
+            reasoning="Non-healing ulcers with discoloration suggest skin vasculitis.",
+            new_cf=cf * 0.85
+        )
+
+
+    @Rule(Answer(ident="bleeding", text="yes", cf=MATCH.cf1),
+        Answer(ident="enlarging_rapidly", text="yes", cf=MATCH.cf2),
+        Answer(ident="sun_exposure_area", text="yes", cf=MATCH.cf3))
+    def diagnose_malignant_lesion(self, cf1, cf2, cf3):
+        cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+        self.declare_or_update_diagnosis(
+            disease="Malignant Lesion (Skin Cancer)",
+            reasoning="Lesion is bleeding, enlarging rapidly, and in sun-exposed area — likely skin cancer.",
+            new_cf=cf * 0.95
+        )
+
+
+    @Rule(ImageDiagnosis(disease="Malignant Lesion (Skin Cancer)", confidence=MATCH.conf),
+        TEST(lambda conf: conf >= 0.7))
+    def diagnose_cancer_cv(self, conf):
+        self.declare_or_update_diagnosis(
+            "Malignant Lesion (Skin Cancer)",
+            f"CV model predicted malignancy with {conf:.2f} confidence",
+            new_cf=conf
+        )
+
 
     # Add a rule to trigger final diagnosis after collecting enough information
     @Rule(
