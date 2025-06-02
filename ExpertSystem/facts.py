@@ -85,11 +85,10 @@ class DiseaseInfo(Fact):
     """
     name = Field(str, mandatory=True)
     common_symptoms = Field(dict, mandatory=True)
-    affected_gender = Field(str, default=None)          # e.g., 'female'
     common_age_range = Field(str, default=None)         # e.g., '20-40'
     common_locations = Field(list, default=[])
     severity_levels = Field(list, default=[])
     common_duration = Field(str, default=None)          # e.g., '2 weeks'
     triggers = Field(list, default=[])                  # e.g., ['stress']
-    common_treatments = Field(list, default=[])
+    # common_treatments = Field(list, default=[])
     notes = Field(str, default=None)                    # Extra notes
