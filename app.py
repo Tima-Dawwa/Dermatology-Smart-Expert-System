@@ -1,7 +1,6 @@
 import sys
 from ExpertSystem.facts import *
 from ExpertSystem.engine import DermatologyExpert
-import os
 import json
 import collections
 import collections.abc
