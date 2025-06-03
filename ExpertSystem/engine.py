@@ -1,11 +1,8 @@
 from ExpertSystem.facts import *
 from ExpertSystem.Data.disease import diseases
 from ExpertSystem.Questions.question import basic_questions
-
 from ExpertSystem.Questions.question_flow import apply_question_flow
 from experta import *
-
-
 
 class DermatologyExpert(KnowledgeEngine):
 
