@@ -321,7 +321,101 @@ class DermatologyExpert(KnowledgeEngine):
             ],
             notes="Often part of the “atopic triad” (with asthma and allergic rhinitis); worsens in dry environments.",
         )
-
+        yield DiseaseInfo(
+            name="Acne and Rosacea",
+            common_symptoms={
+                "redness": "high",
+                "pimples": "high",
+                "oiliness": "medium",
+            },
+            affected_gender="any",
+            common_age_range="12-40",
+            common_locations=["face", "back", "chest"],
+            severity_levels=["mild", "moderate", "severe"],
+            common_duration="months to years",
+            triggers=["hormones", "stress", "diet"],
+            common_treatments=[
+                "topical retinoids",
+                "benzoyl peroxide",
+                "oral antibiotics (severe cases)",
+            ],
+            notes="Acne is common in teenagers; rosacea is more common in adults with fair skin.",
+        )
+        yield DiseaseInfo(
+            name="Hair Loss, Alopecia, and other Hair Diseases",
+            common_symptoms={
+                "hair thinning": "high",
+                "patchy baldness": "medium",
+                "hair shedding": "medium",
+            },
+            affected_gender="any",
+            common_age_range="20-60",
+            common_locations=["scalp"],
+            severity_levels=["mild", "moderate", "severe"],
+            common_duration="weeks to months",
+            triggers=["genetics", "stress", "autoimmune disorders"],
+            common_treatments=[
+                "minoxidil",
+                "finasteride",
+                "corticosteroids (for alopecia areata)",
+            ],
+            notes="Can be due to hormonal, genetic, or autoimmune causes.",
+        )
+        yield DiseaseInfo(
+            name="Exanthems and Drug Eruptions",
+            common_symptoms={"rash": "high", "redness": "high", "itching": "medium"},
+            affected_gender="any",
+            common_age_range="any",
+            common_locations=["trunk", "arms", "legs"],
+            severity_levels=["mild", "moderate", "severe"],
+            common_duration="days to weeks",
+            triggers=["viral infections", "medications"],
+            common_treatments=[
+                "antihistamines",
+                "topical corticosteroids",
+                "stop causative drug (if applicable)",
+            ],
+            notes="Usually self-limited but can occasionally be severe (e.g. Stevens-Johnson syndrome).",
+        )
+        yield DiseaseInfo(
+            name="Poison Ivy and other Contact Dermatitis",
+            common_symptoms={
+                "itching": "high",
+                "redness": "high",
+                "blisters": "medium",
+            },
+            affected_gender="any",
+            common_age_range="any",
+            common_locations=["exposed skin areas"],
+            severity_levels=["mild", "moderate"],
+            common_duration="1-3 weeks",
+            triggers=["plants (poison ivy/oak)", "chemicals", "fragrances"],
+            common_treatments=[
+                "topical corticosteroids",
+                "oral antihistamines",
+                "cool compresses",
+            ],
+            notes="Results from skin contact with allergens or irritants; not contagious.",
+        )
+        yield DiseaseInfo(
+            name="Light Diseases and Disorders of Pigmentation",
+            common_symptoms={
+                "white or dark patches": "high",
+                "irregular pigmentation": "medium",
+            },
+            affected_gender="any",
+            common_age_range="any",
+            common_locations=["face", "neck", "hands"],
+            severity_levels=["mild"],
+            common_duration="months to years",
+            triggers=["sun exposure", "genetics", "autoimmune disorders"],
+            common_treatments=[
+                "sunscreens",
+                "topical corticosteroids",
+                "light therapy (for vitiligo)",
+            ],
+            notes="Includes conditions like vitiligo and melasma; may cause cosmetic concerns.",
+        )
         yield DiseaseInfo(
             name="Bullous Disease",
             common_symptoms={"blisters": "high", "pain": "medium"},
@@ -333,7 +427,6 @@ class DermatologyExpert(KnowledgeEngine):
             common_treatments=["corticosteroids", "immunosuppressants"],
             notes="Autoimmune blistering diseases such as pemphigoid or pemphigus."
         )
-
         yield DiseaseInfo(
             name="Herpes / STDs",
             common_symptoms={"blisters": "high", "pain": "high"},
@@ -345,7 +438,6 @@ class DermatologyExpert(KnowledgeEngine):
             common_treatments=["antivirals (acyclovir)", "topical treatments"],
             notes="Painful fluid-filled blisters caused by sexually transmitted viruses."
         )
-
         yield DiseaseInfo(
             name="Systemic Disease",
             common_symptoms={"joint_pain": "medium",
@@ -358,7 +450,6 @@ class DermatologyExpert(KnowledgeEngine):
             common_treatments=["corticosteroids", "DMARDs", "immunotherapy"],
             notes="Internal diseases like lupus or vasculitis with skin symptoms."
         )
-
         yield DiseaseInfo(
             name="Vasculitis",
             common_symptoms={"ulcer": "medium", "pain": "medium"},
@@ -370,7 +461,6 @@ class DermatologyExpert(KnowledgeEngine):
             common_treatments=["corticosteroids", "immunosuppressants"],
             notes="Inflammation of blood vessels causing skin ulcers and pain."
         )
-
         yield DiseaseInfo(
             name="Malignant Skin Lesions",
             common_symptoms={"ulcer": "high", "discoloration": "high"},
@@ -383,6 +473,7 @@ class DermatologyExpert(KnowledgeEngine):
                                "cryotherapy", "topical chemotherapy"],
             notes="Includes Actinic Keratosis and Basal Cell Carcinoma — can progress to skin cancer."
         )
+
         yield question(ident="age", text="What is your age?", valid=[], Type="text")
         yield question(ident="symptom_duration", text="How long have the symptoms lasted?", valid=[], Type="text")
 
@@ -404,8 +495,10 @@ class DermatologyExpert(KnowledgeEngine):
             ("fever_rash", "Have you had a fever along with a skin rash?"),
             ("worse_at_night", "Is the itching worse at night?"),
             ("rash_shape", "Are the lesions ring-shaped or have a clear border?"),
-            ("trigger_cosmetics",
-             "Did the symptoms appear after using a cosmetic or cream?"),
+            (
+                "trigger_cosmetics",
+                "Did the symptoms appear after using a cosmetic or cream?",
+            ),
             ("joint_pain", "Do you have joint pain along with the rash?"),
             ("rash_between_fingers", "Is the rash between your fingers?"),
             ("rash_scalp", "Do you have flaking or redness on your scalp?"),
@@ -415,7 +508,32 @@ class DermatologyExpert(KnowledgeEngine):
             ("mucosal_involvement", "Are your lips, mouth or genitals also affected?"),
             ("sun_exposure_area", "Is the lesion in a sun-exposed area?"),
             ("history_cancer", "Do you have a personal or family history of cancer?"),
-            ("recurrence", "Has the rash appeared in the same area before?")
+            ("recurrence", "Has the rash appeared in the same area before?"),
+            ("drug_history", "Did you recently start any new medications?"),
+            ("rash_symmetry", "Is the rash symmetrical on both sides of the body?"),
+            ("vesicles", "Do you have small fluid-filled blisters or vesicles?"),
+            ("itching_exanthems", "Do you experience itching in the affected area?"),
+            ("hair_loss_alopecia", "Are you experiencing hair loss or thinning?"),
+            (
+                "acne",
+                "Do you have pimples, blackheads, or whiteheads on your face or back?",
+            ),
+            (
+                "rosacea",
+                "Do you experience facial redness, especially on your cheeks and nose?",
+            ),
+            (
+                "contact_history",
+                "Have you been in contact with plants or chemicals that might cause a reaction?",
+            ),
+            (
+                "skin_lightening",
+                "Have you noticed any areas of skin becoming lighter or darker?",
+            ),
+            (
+                "sun_sensitivity_light_disorders",
+                "Does the condition worsen after sun exposure?",
+            ),
         ]
 
         yield question(
@@ -535,6 +653,103 @@ class DermatologyExpert(KnowledgeEngine):
     @Rule(Answer(ident="mucosal_involvement", text=MATCH.response))
     def after_mucosal(self, response):
         self.declare(Fact(next="sun_exposure_area"))
+
+    @Rule(Answer(ident="sun_exposure_area", text=MATCH.response))
+    def after_sun_exposure(self, response):
+        self.declare(Fact(next="rash_shape"))
+
+    @Rule(Answer(ident="rash_shape", text=MATCH.response))
+    def after_rash_shape(self, response):
+        self.declare(Fact(next="rash_between_fingers"))
+
+    @Rule(Answer(ident="rash_between_fingers", text=MATCH.response))
+    def after_rash_between_fingers(self, response):
+        self.declare(Fact(next="rash_scalp"))
+
+    @Rule(Answer(ident="rash_scalp", text=MATCH.response))
+    def after_rash_scalp(self, response):
+        self.declare(Fact(next="oozing_crusting"))
+
+    @Rule(Answer(ident="oozing_crusting", text=MATCH.response))
+    def after_oozing_crusting(self, response):
+        self.declare(Fact(next="vesicles"))
+
+    @Rule(Answer(ident="vesicles", text=MATCH.response))
+    def after_vesicles(self, response):
+        self.declare(Fact(next="hair_loss"))
+
+    @Rule(Answer(ident="hair_loss", text=MATCH.response))
+    def after_hair_loss(self, response):
+        self.declare(Fact(next="nail_changes"))
+
+    @Rule(Answer(ident="nail_changes", text=MATCH.response))
+    def after_nail_changes(self, response):
+        self.declare(Fact(next="photosensitivity"))
+
+    @Rule(Answer(ident="photosensitivity", text=MATCH.response))
+    def after_photosensitivity(self, response):
+        self.declare(Fact(next="hives"))
+
+    @Rule(Answer(ident="hives", text=MATCH.response))
+    def after_hives(self, response):
+        self.declare(Fact(next="fever_rash"))
+
+    @Rule(Answer(ident="fever_rash", text=MATCH.response))
+    def after_fever_rash(self, response):
+        self.declare(Fact(next="drug_history"))
+
+    @Rule(Answer(ident="drug_history", text=MATCH.response))
+    def after_drug_history(self, response):
+        self.declare(Fact(next="contact_history"))
+
+    @Rule(Answer(ident="contact_history", text=MATCH.response))
+    def after_contact_history(self, response):
+        self.declare(Fact(next="skin_lightening"))
+
+    @Rule(Answer(ident="skin_lightening", text=MATCH.response))
+    def after_skin_lightening(self, response):
+        self.declare(Fact(next="burning_sensation"))
+
+    @Rule(Answer(ident="burning_sensation", text=MATCH.response))
+    def after_burning_sensation(self, response):
+        self.declare(Fact(next="weight_loss"))
+
+    @Rule(Answer(ident="weight_loss", text=MATCH.response))
+    def after_weight_loss(self, response):
+        self.declare(Fact(next="night_sweats"))
+
+    @Rule(Answer(ident="night_sweats", text=MATCH.response))
+    def after_night_sweats(self, response):
+        self.declare(Fact(next="autoimmune_history"))
+
+    @Rule(Answer(ident="autoimmune_history", text=MATCH.response))
+    def after_autoimmune_history(self, response):
+        self.declare(Fact(next="acne"))
+
+    @Rule(Answer(ident="acne", text=MATCH.response))
+    def after_acne(self, response):
+        self.declare(Fact(next="rosacea"))
+
+    @Rule(Answer(ident="rosacea", text=MATCH.response))
+    def after_rosacea(self, response):
+        self.declare(Fact(next="rash_symmetry"))
+
+    @Rule(Answer(ident="rash_symmetry", text=MATCH.response))
+    def after_rash_symmetry(self, response):
+        self.declare(Fact(next="swelling"))
+
+    @Rule(Answer(ident="swelling", text=MATCH.response))
+    def after_swelling(self, response):
+        self.declare(Fact(next="history_cancer"))
+
+    @Rule(Answer(ident="history_cancer", text=MATCH.response))
+    def after_history_cancer(self, response):
+        self.declare(Fact(next=None))
+
+    # handle when questioning ends
+    @Rule(Fact(next=None))
+    def diagnosis_complete(self):
+        self.declare(Fact(diagnosis_complete=True))
 
     def combine_cf(self, cf1, cf2):
         if cf1 >= 0 and cf2 >= 0:
@@ -683,6 +898,66 @@ class DermatologyExpert(KnowledgeEngine):
             "Malignant Lesion (Skin Cancer)",
             f"CV model predicted malignancy with {conf:.2f} confidence",
             new_cf=conf
+        )
+        
+    @Rule(
+        Answer(ident="acne", text="yes", cf=MATCH.cf1),
+        Answer(ident="rosacea", text="yes", cf=MATCH.cf2),
+    )
+    def diagnose_acne_rosacea(self, cf1, cf2):
+        cf = self.combine_cf(cf1, cf2)
+        self.declare_or_update_diagnosis(
+            disease="Acne and Rosacea",
+            reasoning="Presence of pimples/blackheads and facial redness indicates Acne or Rosacea.",
+            new_cf=cf * 0.85,
+        )
+
+    @Rule(
+        Answer(ident="hair_loss", text="yes", cf=MATCH.cf1),
+    )
+    def diagnose_hair_loss(self, cf1):
+        cf = cf1
+        self.declare_or_update_diagnosis(
+            disease="Hair Loss, Alopecia, and other Hair Diseases",
+            reasoning="Hair loss or thinning is a key sign of hair diseases.",
+            new_cf=cf * 0.85,
+        )
+
+    @Rule(
+        Answer(ident="rash_symmetry", text="yes", cf=MATCH.cf1),
+        Answer(ident="drug_history", text="yes", cf=MATCH.cf2),
+    )
+    def diagnose_drug_eruption(self, cf1, cf2):
+        cf = self.combine_cf(cf1, cf2)
+        self.declare_or_update_diagnosis(
+            disease="Exanthems and Drug Eruptions",
+            reasoning="Symmetrical rash and recent medication use suggest a drug eruption.",
+            new_cf=cf * 0.9,
+        )
+
+    @Rule(
+        Answer(ident="itching", text="yes", cf=MATCH.cf1),
+        Answer(ident="vesicles", text="yes", cf=MATCH.cf2),
+        Answer(ident="contact_history", text="yes", cf=MATCH.cf3),
+    )
+    def diagnose_contact_dermatitis(self, cf1, cf2, cf3):
+        cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+        self.declare_or_update_diagnosis(
+            disease="Poison Ivy and other Contact Dermatitis",
+            reasoning="Itching, vesicles, and contact history suggest contact dermatitis.",
+            new_cf=cf * 0.9,
+        )
+
+    @Rule(
+        Answer(ident="sun_exposure", text="yes", cf=MATCH.cf1),
+        Answer(ident="skin_lightening", text="yes", cf=MATCH.cf2),
+    )
+    def diagnose_light_diseases(self, cf1, cf2):
+        cf = self.combine_cf(cf1, cf2)
+        self.declare_or_update_diagnosis(
+            disease="Light Diseases and Disorders of Pigmentation",
+            reasoning="Photosensitivity and skin lightening suggest a light-related disorder.",
+            new_cf=cf * 0.85,
         )
 
     @Rule(
