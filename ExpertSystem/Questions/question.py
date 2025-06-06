@@ -1,15 +1,16 @@
 from ExpertSystem.facts import question
+from ExpertSystem.Data import disease
 
 # General questions (applicable to all branches)
 general_mcq_questions = [
-    question(ident="age_range", text="What is your age range?",
-             valid=["1-10", "5-60", "10-40", "12-40", "15-45", "15-50", "20-50", "20-60", "30-60", "40+", "50+", "any", "infancy to 30", "teenagers to young adults", "children, adults with iron-deficiency anemia"], Type="multi"),
+    question(ident="age_range", text="What is your age?",
+             valid=[], Type="number"),
 
     question(ident="severity_levels", text="How would you rate the severity?",
-             valid=["mild", "moderate", "severe", "severe (immunocompromised)"], Type="multi"),
+             valid=["mild", "moderate", "severe"], Type="multi"),
 
     question(ident="common_duration", text="How long have you had this condition?",
-             valid=["2 weeks", "2–4 weeks", "1–2 weeks", "weeks to months", "months", "6–12 months", "7–14 days", "days to weeks", "chronic", "months to years", "1-3 weeks", "weeks to chronic", "chronic with flares", "persistent", "days to weeks (acute), months (chronic)", "weeks to months (depending on cause)", "chronic unless treated", "7–14 days (per episode)", "6–12 months (self-limited)", "persistent / chronic", "1-3 weeks (recurring)"], Type="multi"),
+             valid=disease.DURATION_OPTIONS, Type="multi"),
 ]
 
 # General binary questions

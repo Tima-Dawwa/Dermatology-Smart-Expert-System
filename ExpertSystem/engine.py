@@ -7,6 +7,11 @@ from experta import *
 
 class DermatologyExpert(KnowledgeEngine):
 
+    def __init__(self):
+        super().__init__()
+        self.patient_age = None
+        self.condition_duration = None  # Add duration tracking
+
     @DefFacts()
     def initial_questions(self):
         for d in diseases:
@@ -28,6 +33,40 @@ class DermatologyExpert(KnowledgeEngine):
         cf = 1.0 if response == "yes" else 0.0
         self.declare(Answer(ident=next_q, text=response, cf=cf))
 
+        # Capture age for later use
+        if next_q == "age_range":
+            self.patient_age = self.parse_age_range(response)
+
+        # Capture duration for later use
+        elif next_q == "common_duration":
+            self.condition_duration = self.parse_duration(response)
+
+    def parse_age_range(self, age_response):
+        """Parse age range response and return midpoint for calculations"""
+        age_mappings = {
+            "child (0-12)": 6,
+            "teenager (13-19)": 16,
+            "young adult (20-35)": 27,
+            "middle-aged (36-55)": 45,
+            "senior (56+)": 65
+        }
+        # Default to 30 if unknown
+        return age_mappings.get(age_response.lower(), 30)
+
+    def parse_duration(self, duration_response):
+        """Parse duration response and return value in days for calculations"""
+        duration_mappings = {
+            "less than 1 week": 3,
+            "1-2 weeks": 10,
+            "2-4 weeks": 21,
+            "1-3 months": 60,
+            "3-6 months": 135,
+            "6 months - 1 year": 270,
+            "more than 1 year": 500
+        }
+        # Default to 30 days if unknown
+        return duration_mappings.get(duration_response.lower(), 30)
+
     def ask_user(self, question_text, Type, valid=None):
         print("\n🧐 " + question_text)
         if Type == "multi" and valid:
@@ -47,15 +86,123 @@ class DermatologyExpert(KnowledgeEngine):
         else:
             return (cf1 + cf2) / (1 - min(abs(cf1), abs(cf2)))
 
+    def calculate_age_factor(self, disease_name):
+        """Calculate age-based confidence factor for a disease"""
+        if self.patient_age is None:
+            return 1.0  # No age adjustment if age unknown
+
+        # Find the disease info
+        disease_info = None
+        for fact in self.facts.values():
+            if isinstance(fact, DiseaseInfo) and fact["name"] == disease_name:
+                disease_info = fact
+                break
+
+        if not disease_info:
+            return 1.0
+
+        age_min = disease_info.get("age_min", 0)
+        age_max = disease_info.get("age_max", 100)
+
+        # If patient age is within typical range, no penalty
+        if age_min <= self.patient_age <= age_max:
+            return 1.0
+
+        # Calculate penalty based on how far outside the range
+        if self.patient_age < age_min:
+            distance = age_min - self.patient_age
+        else:
+            distance = self.patient_age - age_max
+
+        # Apply exponential decay penalty - more distance = lower confidence
+        # Maximum penalty is 50% (factor of 0.5)
+        penalty_factor = max(0.5, 1.0 - (distance / 50.0))
+        return penalty_factor
+
+    def calculate_duration_factor(self, disease_name):
+        """Calculate duration-based confidence factor for a disease"""
+        if self.condition_duration is None:
+            return 1.0  # No duration adjustment if duration unknown
+
+        # Find the disease info
+        disease_info = None
+        for fact in self.facts.values():
+            if isinstance(fact, DiseaseInfo) and fact["name"] == disease_name:
+                disease_info = fact
+                break
+
+        if not disease_info:
+            return 1.0
+
+        # Get typical duration range for the disease (in days)
+        duration_min = disease_info.get("duration_min", 1)
+        duration_max = disease_info.get("duration_max", 365)
+
+        # If condition duration is within typical range, no penalty
+        if duration_min <= self.condition_duration <= duration_max:
+            return 1.0
+
+        # Calculate penalty based on how far outside the range
+        if self.condition_duration < duration_min:
+            # Condition too short for this disease
+            distance = duration_min - self.condition_duration
+            penalty_factor = max(0.6, 1.0 - (distance / duration_min * 0.4))
+        else:
+            # Condition too long for this disease
+            distance = self.condition_duration - duration_max
+            penalty_factor = max(0.7, 1.0 - (distance / duration_max * 0.3))
+
+        return penalty_factor
+
+    def get_duration_category(self):
+        """Get duration category string for display"""
+        if self.condition_duration is None:
+            return "Unknown"
+        elif self.condition_duration <= 7:
+            return "Less than 1 week"
+        elif self.condition_duration <= 14:
+            return "1-2 weeks"
+        elif self.condition_duration <= 30:
+            return "2-4 weeks"
+        elif self.condition_duration <= 90:
+            return "1-3 months"
+        elif self.condition_duration <= 180:
+            return "3-6 months"
+        elif self.condition_duration <= 365:
+            return "6 months - 1 year"
+        else:
+            return "More than 1 year"
+
     def declare_or_update_diagnosis(self, disease, reasoning, new_cf):
+        # Apply age-based adjustment
+        age_factor = self.calculate_age_factor(disease)
+
+        # Apply duration-based adjustment
+        duration_factor = self.calculate_duration_factor(disease)
+
+        # Combine both adjustments
+        adjusted_cf = new_cf * age_factor * duration_factor
+
+        # Add adjustment notes if adjustments were made
+        adjustment_notes = []
+        if age_factor < 1.0:
+            adjustment_notes.append(f"Age-adjusted: {age_factor:.2f}")
+        if duration_factor < 1.0:
+            adjustment_notes.append(
+                f"Duration-adjusted: {duration_factor:.2f}")
+
+        if adjustment_notes:
+            adjustment_note = f" ({', '.join(adjustment_notes)})"
+            reasoning += adjustment_note
+
         for fact in self.facts.values():
             if isinstance(fact, Diagnosis) and fact["disease"] == disease:
-                combined_cf = self.combine_cf(fact["cf"], new_cf)
+                combined_cf = self.combine_cf(fact["cf"], adjusted_cf)
                 self.modify(fact, cf=combined_cf, reasoning=reasoning +
                             f" (updated CF: {combined_cf:.2f})")
                 return
         self.declare(Diagnosis(disease=disease,
-                     reasoning=reasoning, cf=new_cf))
+                     reasoning=reasoning, cf=adjusted_cf))
 
     # ECZEMA/ATOPIC DERMATITIS RULES
     @Rule(Answer(ident="itching", text="yes", cf=MATCH.cf1),
@@ -413,6 +560,12 @@ class DermatologyExpert(KnowledgeEngine):
             print("🏥 DIAGNOSTIC RESULTS")
             print("="*50)
 
+            if self.patient_age:
+                print(f"Patient Age Category: {self.get_age_category()}")
+            if self.condition_duration:
+                print(f"Condition Duration: {self.get_duration_category()}")
+            print("-" * 50)
+
             for i, diagnosis in enumerate(diagnoses[:3], 1):  # Show top 3
                 print(f"\n{i}. {diagnosis['disease']}")
                 print(f"   Confidence: {diagnosis['cf'] * 100:.1f}%")
@@ -420,17 +573,20 @@ class DermatologyExpert(KnowledgeEngine):
 
                 # Find disease info for additional details
                 for disease_fact in self.facts.values():
-                    if (isinstance(disease_fact, DiseaseInfo) and
-                            disease_fact["name"] == diagnosis['disease']):
-                        if "common_treatments" in disease_fact:
+                    if isinstance(disease_fact, DiseaseInfo) and disease_fact["name"] == diagnosis['disease']:
+                        print(
+                            f"   Description: {disease_fact.get('description', 'No description available')}")
+                        if disease_fact.get('age_min') and disease_fact.get('age_max'):
                             print(
-                                f"   Common Treatments: {', '.join(disease_fact['common_treatments'])}")
-                        if "notes" in disease_fact:
-                            print(f"   Notes: {disease_fact['notes']}")
+                                f"   Typical Age Range: {disease_fact['age_min']}-{disease_fact['age_max']} years")
+                        if disease_fact.get('duration_min') and disease_fact.get('duration_max'):
+                            print(
+                                f"   Typical Duration: {disease_fact['duration_min']}-{disease_fact['duration_max']} days")
                         break
 
             print("\n" + "="*50)
             print("⚠️  DISCLAIMER: This is a preliminary assessment.")
+            print("Age-based adjustments have been applied to improve accuracy.")
             print(
                 "Please consult a healthcare professional for proper diagnosis and treatment.")
             print("="*50)
@@ -439,6 +595,19 @@ class DermatologyExpert(KnowledgeEngine):
                 "\n⚠️ No confident diagnosis could be made based on the provided symptoms.")
             print(
                 "Consider providing more detailed information or consulting a healthcare professional.")
+
+    def get_age_category(self):
+        """Get age category string for display"""
+        if self.patient_age <= 12:
+            return "Child (0-12)"
+        elif self.patient_age <= 19:
+            return "Teenager (13-19)"
+        elif self.patient_age <= 35:
+            return "Young Adult (20-35)"
+        elif self.patient_age <= 55:
+            return "Middle-aged (36-55)"
+        else:
+            return "Senior (56+)"
 
 
 # Apply the question flow decorator
