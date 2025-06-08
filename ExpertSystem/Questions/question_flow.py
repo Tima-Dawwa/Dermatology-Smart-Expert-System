@@ -229,10 +229,188 @@ def apply_question_flow(cls):
         self.declare(Fact(next="malignant_locations"))
     cls.systemic_location = systemic_location
 
+    # CELLULITIS BRANCH
+    @Rule(Answer(ident="redness", text="yes"))
+    def cellulitis_branch(self):
+        self.declare(Fact(next="pain"))
+        self.declare(Fact(condition_group="cellulitis_likely"))
+
+    cls.cellulitis_branch = cellulitis_branch
+
+    @Rule(
+        Answer(ident="pain", text=MATCH.response),
+        Fact(condition_group="cellulitis_likely"),
+    )
+    def cellulitis_progress(self, response):
+        self.declare(Fact(next="swelling"))
+
+    cls.cellulitis_progress = cellulitis_progress
+
+    @Rule(
+        Answer(ident="swelling", text=MATCH.response),
+        Fact(condition_group="cellulitis_likely"),
+    )
+    def cellulitis_location(self, response):
+        self.declare(Fact(next="cellulitis_locations"))
+
+    cls.cellulitis_location = cellulitis_location
+
+    # IMPETIGO BRANCH
+    @Rule(Answer(ident="blisters", text="yes"))
+    def impetigo_branch(self):
+        self.declare(Fact(next="crusting"))
+        self.declare(Fact(condition_group="impetigo_likely"))
+
+    cls.impetigo_branch = impetigo_branch
+
+    @Rule(
+        Answer(ident="crusting", text=MATCH.response),
+        Fact(condition_group="impetigo_likely"),
+    )
+    def impetigo_location(self, response):
+        self.declare(Fact(next="impetigo_locations"))
+
+    cls.impetigo_location = impetigo_location
+
+    # LUPUS BRANCH
+    @Rule(Answer(ident="rash", text="yes"))
+    def lupus_branch(self):
+        self.declare(Fact(next="joint_pain"))
+        self.declare(Fact(condition_group="lupus_likely"))
+
+    cls.lupus_branch = lupus_branch
+
+    @Rule(
+        Answer(ident="joint_pain", text=MATCH.response),
+        Fact(condition_group="lupus_likely"),
+    )
+    def lupus_progress(self, response):
+        self.declare(Fact(next="photosensitivity"))
+
+    cls.lupus_progress = lupus_progress
+
+    @Rule(
+        Answer(ident="photosensitivity", text=MATCH.response),
+        Fact(condition_group="lupus_likely"),
+    )
+    def lupus_location(self, response):
+        self.declare(Fact(next="lupus_locations"))
+
+    cls.lupus_location = lupus_location
+
+    # CONNECTIVE TISSUE DISEASES BRANCH
+    @Rule(Answer(ident="joint_pain", text="yes"))
+    def connective_branch(self):
+        self.declare(Fact(next="rash"))
+        self.declare(Fact(condition_group="connective_likely"))
+
+    cls.connective_branch = connective_branch
+
+    @Rule(
+        Answer(ident="rash", text=MATCH.response),
+        Fact(condition_group="connective_likely"),
+    )
+    def connective_location(self, response):
+        self.declare(Fact(next="connective_tissue_locations"))
+
+    cls.connective_location = connective_location
+
+    # MELANOMA BRANCH
+    @Rule(Answer(ident="discoloration", text="yes"))
+    def melanoma_branch(self):
+        self.declare(Fact(next="mole_change"))
+        self.declare(Fact(condition_group="melanoma_likely"))
+
+    cls.melanoma_branch = melanoma_branch
+
+    @Rule(
+        Answer(ident="mole_change", text=MATCH.response),
+        Fact(condition_group="melanoma_likely"),
+    )
+    def melanoma_location(self, response):
+        self.declare(Fact(next="melanoma_locations"))
+
+    cls.melanoma_location = melanoma_location
+
+    # NEVI AND MOLES BRANCH
+    @Rule(Answer(ident="mole_change", text="yes"))
+    def nevi_branch(self):
+        self.declare(Fact(next="itching"))
+        self.declare(Fact(condition_group="nevi_likely"))
+
+    cls.nevi_branch = nevi_branch
+
+    @Rule(
+        Answer(ident="itching", text=MATCH.response),
+        Fact(condition_group="nevi_likely"),
+    )
+    def nevi_location(self, response):
+        self.declare(Fact(next="nevi_locations"))
+
+    cls.nevi_location = nevi_location
+
+    # SCABIES BRANCH
+    @Rule(Answer(ident="itching", text="yes"))
+    def scabies_branch(self):
+        self.declare(Fact(next="rash_between_fingers"))
+        self.declare(Fact(condition_group="scabies_likely"))
+
+    cls.scabies_branch = scabies_branch
+
+    @Rule(
+        Answer(ident="rash_between_fingers", text=MATCH.response),
+        Fact(condition_group="scabies_likely"),
+    )
+    def scabies_location(self, response):
+        self.declare(Fact(next="scabies_locations"))
+
+    cls.scabies_location = scabies_location
+
+    # LYME DISEASE BRANCH
+    @Rule(Answer(ident="rash", text="yes"))
+    def lyme_branch(self):
+        self.declare(Fact(next="joint_pain"))
+        self.declare(Fact(condition_group="lyme_likely"))
+
+    cls.lyme_branch = lyme_branch
+
+    @Rule(
+        Answer(ident="joint_pain", text=MATCH.response),
+        Fact(condition_group="lyme_likely"),
+    )
+    def lyme_progress(self, response):
+        self.declare(Fact(next="tick_bite"))
+
+    cls.lyme_progress = lyme_progress
+
+    @Rule(
+        Answer(ident="tick_bite", text=MATCH.response),
+        Fact(condition_group="lyme_likely"),
+    )
+    def lyme_location(self, response):
+        self.declare(Fact(next="lyme_disease_locations"))
+
+    cls.lyme_location = lyme_location
+
     # TERMINAL RULES - End diagnosis flow
-    terminal_locations = ["psoriasis_locations", "eczema_locations", "fungal_locations",
-                          "contact_locations", "viral_locations", "benign_locations",
-                          "nail_locations", "malignant_locations"]
+    terminal_locations = [
+        "psoriasis_locations",
+        "eczema_locations",
+        "fungal_locations",
+        "contact_locations",
+        "viral_locations",
+        "benign_locations",
+        "nail_locations",
+        "malignant_locations",
+        "cellulitis_locations",
+        "impetigo_locations",
+        "lupus_locations",
+        "connective_tissue_locations",
+        "melanoma_locations",
+        "nevi_locations",
+        "scabies_locations",
+        "lyme_disease_locations",
+    ]
 
     for location in terminal_locations:
         def make_terminal_rule(loc):

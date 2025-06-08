@@ -230,6 +230,144 @@ malignant_mcq_questions = [
              valid=["arms", "trunk", "legs", "face", "ears", "scalp", "hands", "genital area", "mouth", "buttocks", "chest", "feet", "fingers"], Type="multi"),
 ]
 
+# 12. Cellulitis Impetigo and other Bacterial Infections
+cellulitis_yes_no_questions = [
+    ("redness", "Do you have redness on the affected area?"),
+    ("pain", "Is the area painful?"),
+    ("swelling", "Is the area swollen?"),
+    ("warmth", "Does the area feel warm to the touch?"),
+    ("fever", "Have you had a fever?"),
+]
+
+cellulitis_mcq_questions = [
+    question(
+        ident="cellulitis_locations",
+        text="Where is the cellulitis located?",
+        valid=["legs", "arms", "face"],
+        Type="multi",
+    ),
+]
+
+impetigo_yes_no_questions = [
+    ("blisters", "Do you have blisters on your skin?"),
+    ("crusting", "Do the blisters form a yellowish crust?"),
+    ("itching", "Does the affected area itch?"),
+    ("spread", "Is the rash spreading to other areas?"),
+]
+
+impetigo_mcq_questions = [
+    question(
+        ident="impetigo_locations",
+        text="Where is the impetigo located?",
+        valid=["face", "around mouth and nose", "arms"],
+        Type="multi",
+    ),
+]
+
+# 13. Lupus and other Connective Tissue diseases
+lupus_yes_no_questions = [
+    ("rash", "Do you have a skin rash?"),
+    ("joint_pain", "Do you have joint pain?"),
+    ("photosensitivity", "Does the rash worsen with sun exposure?"),
+    ("fatigue", "Do you often feel unusually tired?"),
+]
+
+lupus_mcq_questions = [
+    question(
+        ident="lupus_locations",
+        text="Where is the lupus rash located?",
+        valid=["face (butterfly rash)", "arms", "chest"],
+        Type="multi",
+    ),
+]
+
+connective_tissue_yes_no_questions = [
+    ("joint_pain", "Do you have joint pain?"),
+    ("rash", "Do you have a rash on your skin?"),
+    ("photosensitivity", "Does the rash worsen with sun exposure?"),
+]
+
+connective_tissue_mcq_questions = [
+    question(
+        ident="connective_tissue_locations",
+        text="Where is the rash located?",
+        valid=["face", "hands", "chest"],
+        Type="multi",
+    ),
+]
+
+# 14. Melanoma Skin Cancer Nevi and Moles
+melanoma_yes_no_questions = [
+    ("discoloration", "Do you notice any changes in skin color or a new dark spot?"),
+    ("ulcer", "Do you have a non-healing ulcer or sore?"),
+    ("bleeding", "Is the lesion bleeding spontaneously?"),
+    ("enlarging_rapidly", "Has the lesion grown rapidly?"),
+    ("mole_change", "Has an existing mole changed in size, shape, or color?"),
+]
+
+melanoma_mcq_questions = [
+    question(
+        ident="melanoma_locations",
+        text="Where is the suspicious lesion located?",
+        valid=["back", "legs", "arms", "face"],
+        Type="multi",
+    ),
+]
+
+nevi_yes_no_questions = [
+    (
+        "discoloration",
+        "Do you notice any changes in skin color or a new pigmented spot?",
+    ),
+    ("mole_change", "Has a mole changed in size, shape, or color?"),
+    ("itching", "Does the mole itch?"),
+    ("bleeding", "Does the mole bleed or crust?"),
+]
+
+nevi_mcq_questions = [
+    question(
+        ident="nevi_locations",
+        text="Where is the mole or pigmented spot located?",
+        valid=["any skin area"],
+        Type="multi",
+    ),
+]
+
+# 15. Scabies Lyme Disease and other Infestations and Bites
+scabies_yes_no_questions = [
+    ("itching", "Is the itching worse at night?"),
+    ("rash_between_fingers", "Is the rash located between your fingers?"),
+    (
+        "contact_history",
+        "Have you been in close contact with someone with similar symptoms?",
+    ),
+]
+
+scabies_mcq_questions = [
+    question(
+        ident="scabies_locations",
+        text="Where is the rash located?",
+        valid=["between fingers", "wrists", "waist", "armpits"],
+        Type="multi",
+    ),
+]
+
+lyme_disease_yes_no_questions = [
+    ("rash", "Do you have a rash?"),
+    ("joint_pain", "Do you have joint pain?"),
+    ("fatigue", "Do you feel unusually tired?"),
+    ("tick_bite", "Have you had a recent tick bite?"),
+]
+
+lyme_disease_mcq_questions = [
+    question(
+        ident="lyme_disease_locations",
+        text="Where is the rash located?",
+        valid=["arms", "legs", "torso"],
+        Type="multi",
+    ),
+]
+
 # ADDITIONAL QUESTIONS FOR EXANTHEMS AND DRUG ERUPTIONS:
 
 # Missing symptoms that need questions:
@@ -253,7 +391,15 @@ all_binary_questions = (
     contact_yes_no_questions +
     pigmentation_yes_no_questions +
     malignant_yes_no_questions +
-    additional_yes_no_questions
+    cellulitis_yes_no_questions+
+    impetigo_yes_no_questions+
+    lupus_yes_no_questions+
+    connective_tissue_yes_no_questions+
+    melanoma_yes_no_questions+
+    nevi_yes_no_questions+
+    scabies_yes_no_questions+
+    lyme_disease_yes_no_questions+
+    additional_yes_no_questions 
 )
 
 binary_questions = [
@@ -263,18 +409,26 @@ binary_questions = [
 
 # Combine all MCQ questions
 all_mcq_questions = (
-    general_mcq_questions +
-    fungal_mcq_questions +
-    benign_mcq_questions +
-    viral_mcq_questions +
-    nail_mcq_questions +
-    eczema_mcq_questions +
-    psoriasis_mcq_questions +
-    acne_mcq_questions +
-    hair_loss_mcq_questions +
-    contact_mcq_questions +
-    pigmentation_mcq_questions +
-    malignant_mcq_questions
+    general_mcq_questions
+    + fungal_mcq_questions
+    + benign_mcq_questions
+    + viral_mcq_questions
+    + nail_mcq_questions
+    + eczema_mcq_questions
+    + psoriasis_mcq_questions
+    + acne_mcq_questions
+    + hair_loss_mcq_questions
+    + contact_mcq_questions
+    + pigmentation_mcq_questions
+    + malignant_mcq_questions
+    + cellulitis_mcq_questions
+    + impetigo_mcq_questions
+    + lupus_mcq_questions
+    + connective_tissue_mcq_questions
+    + melanoma_mcq_questions
+    + nevi_mcq_questions
+    + scabies_mcq_questions
+    + lyme_disease_mcq_questions
 )
 
 # Final combined questions list

@@ -541,6 +541,109 @@ class DermatologyExpert(KnowledgeEngine):
             new_cf=cf * 0.9
         )
 
+@Rule(
+    Answer(ident="red_swollen_skin", text="yes", cf=MATCH.cf1),
+    Answer(ident="warmth", text="yes", cf=MATCH.cf2),
+    Answer(ident="pain", text="yes", cf=MATCH.cf3),
+)
+def diagnose_cellulitis(self, cf1, cf2, cf3):
+    cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+    self.declare_or_update_diagnosis(
+        disease="Cellulitis",
+        reasoning="Red, swollen, warm, and painful skin suggests cellulitis.",
+        new_cf=cf * 0.9,
+    )
+
+@Rule(
+    Answer(ident="honey_crusted_lesions", text="yes", cf=MATCH.cf1),
+    Answer(ident="face_and_extremities", text="yes", cf=MATCH.cf2),
+)
+def diagnose_impetigo(self, cf1, cf2):
+    cf = self.combine_cf(cf1, cf2)
+    self.declare_or_update_diagnosis(
+        disease="Impetigo",
+        reasoning="Honey-crusted lesions on face and extremities are characteristic of impetigo.",
+        new_cf=cf * 0.85,
+    )
+
+@Rule(
+    Answer(ident="butterfly_rash", text="yes", cf=MATCH.cf1),
+    Answer(ident="joint_pain", text="yes", cf=MATCH.cf2),
+    Answer(ident="fatigue", text="yes", cf=MATCH.cf3),
+)
+def diagnose_lupus(self, cf1, cf2, cf3):
+    cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+    self.declare_or_update_diagnosis(
+        disease="Lupus",
+        reasoning="Butterfly rash, joint pain, and fatigue suggest systemic lupus erythematosus.",
+        new_cf=cf * 0.9,
+    )
+
+@Rule(
+    Answer(ident="joint_stiffness", text="yes", cf=MATCH.cf1),
+    Answer(ident="raynaud_phenomenon", text="yes", cf=MATCH.cf2),
+    Answer(ident="skin_thickening", text="yes", cf=MATCH.cf3),
+)
+def diagnose_connective_tissue_disease(self, cf1, cf2, cf3):
+    cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+    self.declare_or_update_diagnosis(
+        disease="Connective Tissue Disease",
+        reasoning="Joint stiffness, Raynaud’s phenomenon, and skin thickening suggest connective tissue disease.",
+        new_cf=cf * 0.9,
+    )
+
+@Rule(
+    Answer(ident="asymmetry", text="yes", cf=MATCH.cf1),
+    Answer(ident="irregular_border", text="yes", cf=MATCH.cf2),
+    Answer(ident="color_variegation", text="yes", cf=MATCH.cf3),
+)
+def diagnose_melanoma(self, cf1, cf2, cf3):
+    cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+    self.declare_or_update_diagnosis(
+        disease="Melanoma Skin Cancer",
+        reasoning="Asymmetry, irregular borders, and color variegation are hallmarks of melanoma.",
+        new_cf=cf * 0.95,
+    )
+
+@Rule(
+    Answer(ident="symmetrical_mole", text="yes", cf=MATCH.cf1),
+    Answer(ident="uniform_color", text="yes", cf=MATCH.cf2),
+    Answer(ident="stable_size", text="yes", cf=MATCH.cf3),
+)
+def diagnose_nevi_moles(self, cf1, cf2, cf3):
+    cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+    self.declare_or_update_diagnosis(
+        disease="Nevi and Moles",
+        reasoning="Symmetrical shape, uniform color, and stable size are features of benign nevi.",
+        new_cf=cf * 0.9,
+    )
+
+@Rule(
+    Answer(ident="intense_night_itching", text="yes", cf=MATCH.cf1),
+    Answer(ident="burrow_tracks", text="yes", cf=MATCH.cf2),
+    Answer(ident="close_contact_history", text="yes", cf=MATCH.cf3),
+)
+def diagnose_scabies(self, cf1, cf2, cf3):
+    cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+    self.declare_or_update_diagnosis(
+        disease="Scabies",
+        reasoning="Intense itching at night, burrows, and close contact history suggest scabies.",
+        new_cf=cf * 0.9,
+    )
+
+@Rule(
+    Answer(ident="bullseye_rash", text="yes", cf=MATCH.cf1),
+    Answer(ident="tick_bite", text="yes", cf=MATCH.cf2),
+    Answer(ident="joint_pain", text="yes", cf=MATCH.cf3),
+)
+def diagnose_lyme_disease(self, cf1, cf2, cf3):
+    cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
+    self.declare_or_update_diagnosis(
+        disease="Lyme Disease",
+        reasoning="Bullseye rash, tick bite, and joint pain indicate Lyme disease.",
+        new_cf=cf * 0.9,
+    )
+
     # TRIGGER FINAL DIAGNOSIS
     @Rule(Fact(diagnosis_ready=True), salience=-10)
     def trigger_final_diagnosis(self):
