@@ -92,3 +92,13 @@ class DiseaseInfo(Fact):
     triggers = Field(list, default=[])                  # e.g., ['stress']
     # common_treatments = Field(list, default=[])
     notes = Field(str, default=None)                    # Extra notes
+
+
+class NextQuestion(Fact):
+    """Represents the next question to be asked."""
+    pass
+
+
+class Stop(Fact):
+    """A flag to stop the engine once a diagnosis is made."""
+    pass
