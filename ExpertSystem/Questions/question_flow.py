@@ -1,234 +1,202 @@
-from experta import Rule, Fact, MATCH, NOT
-from ExpertSystem.facts import Answer
+from experta import *
+from ExpertSystem.facts import Answer, NextQuestion
 
 
 def apply_question_flow(cls):
-    @Rule(NOT(Answer(ident="age_range")), salience=100)
-    def start_with_age(self):
-        self.declare(Fact(next="age_range"))
-    cls.start_with_age = start_with_age
+    """
+    This function contains all the rules for asking questions and applies them
+    to the provided KnowledgeEngine class. It perfectly follows the decision tree.
+    """
 
-    # PHASE 1: Demographics and Basic Assessment
-    @Rule(Answer(ident="age_range", text=MATCH.response))
-    def after_age(self, response):
-        self.declare(Fact(next="common_duration"))
-    cls.after_age = after_age
+    # Add this new rule at the beginning of the function
+    @Rule(Fact(start=True), salience=103)
+    def ask_age(self):
+        self.declare(NextQuestion(ident='age'))
+    cls.ask_age = ask_age
 
-    @Rule(Answer(ident="common_duration", text=MATCH.response))
-    def after_duration(self, response):
-        self.declare(Fact(next="severity_levels"))
-    cls.after_duration = after_duration
+    @Rule(Answer(ident='age'), NOT(Answer(ident='duration')), salience=102)
+    def ask_duration(self):
+        self.declare(NextQuestion(ident='duration'))
+    cls.ask_duration = ask_duration
 
-    @Rule(Answer(ident="severity_levels", text=MATCH.response))
-    def after_severity(self, response):
-        self.declare(Fact(next="itching"))
-    cls.after_severity = after_severity
+    @Rule(Answer(ident='duration'), NOT(Answer(ident='severity')), salience=101)
+    def ask_severity(self):
+        self.declare(NextQuestion(ident='severity'))
+    cls.ask_severity = ask_severity
 
-    # PHASE 2: Primary Symptom Branching
-    @Rule(Answer(ident="itching", text="yes"))
-    def itching_yes_branch(self):
-        self.declare(Fact(next="dryness"))
-        self.declare(Fact(branch="itchy_conditions"))
-    cls.itching_yes_branch = itching_yes_branch
+    # --- Step 1: Triage ---
+    @Rule(Answer(ident='severity'), NOT(Answer(ident='has_symptom_lump_or_growth')), salience=100)
+    def ask_triage_1(self):
+        self.declare(NextQuestion(ident='has_symptom_lump_or_growth'))
+    cls.ask_triage_1 = ask_triage_1
 
-    @Rule(Answer(ident="itching", text="no"))
-    def itching_no_branch(self):
-        self.declare(Fact(next="painful_blisters"))
-        self.declare(Fact(branch="non_itchy_conditions"))
-    cls.itching_no_branch = itching_no_branch
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='no'), NOT(Answer(ident='affects_nails_or_hair')), salience=99)
+    def ask_triage_2(self):
+        self.declare(NextQuestion(ident='affects_nails_or_hair'))
+    cls.ask_triage_2 = ask_triage_2
 
-    # ITCHY CONDITIONS BRANCH
-    @Rule(Answer(ident="dryness", text="yes"), Fact(branch="itchy_conditions"))
-    def dry_itchy_branch(self):
-        self.declare(Fact(next="scaling"))
-        self.declare(Fact(sub_branch="eczema_psoriasis"))
-    cls.dry_itchy_branch = dry_itchy_branch
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='no'), Answer(ident='affects_nails_or_hair', text='no'), NOT(Answer(ident='has_symptom_rash')), salience=98)
+    def ask_triage_3(self):
+        self.declare(NextQuestion(ident='has_symptom_rash'))
+    cls.ask_triage_3 = ask_triage_3
 
-    @Rule(Answer(ident="dryness", text="no"), Fact(branch="itchy_conditions"))
-    def wet_itchy_branch(self):
-        self.declare(Fact(next="ring_shaped_rash"))
-        self.declare(Fact(sub_branch="fungal_contact"))
-    cls.wet_itchy_branch = wet_itchy_branch
+    @Rule(OR(Answer(ident='has_symptom_rash', text='yes'),
+             Answer(ident='has_symptom_lump_or_growth', text='yes')),
+          NOT(Answer(ident='locations')),
+          salience=97)
+    def ask_location(self):
+        self.declare(NextQuestion(ident='locations'))
+    cls.ask_location = ask_location
 
-    # Eczema/Psoriasis Sub-branch
-    @Rule(Answer(ident="scaling", text="yes"), Fact(sub_branch="eczema_psoriasis"))
-    def scaling_yes_psoriasis(self):
-        self.declare(Fact(next="redness"))
-        self.declare(Fact(condition_group="psoriasis_likely"))
-    cls.scaling_yes_psoriasis = scaling_yes_psoriasis
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='no'), Answer(ident='affects_nails_or_hair', text='no'), Answer(ident='has_symptom_rash', text='no'), NOT(Answer(ident='has_symptom_palpable_purpura')), salience=97)
+    def ask_triage_4_branch_d(self):
+        self.declare(NextQuestion(ident='has_symptom_palpable_purpura'))
+    cls.ask_triage_4_branch_d = ask_triage_4_branch_d
 
-    @Rule(Answer(ident="scaling", text="no"), Fact(sub_branch="eczema_psoriasis"))
-    def scaling_no_eczema(self):
-        self.declare(Fact(next="redness_and_inflammation"))
-        self.declare(Fact(condition_group="eczema_likely"))
-    cls.scaling_no_eczema = scaling_no_eczema
+    # --- Branch A: Growths ---
 
-    # Psoriasis path
-    @Rule(Answer(ident="redness", text="yes"), Fact(condition_group="psoriasis_likely"))
-    def psoriasis_path(self):
-        self.declare(Fact(next="stress"))
-    cls.psoriasis_path = psoriasis_path
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), NOT(Answer(ident='has_symptom_soft_lump')), salience=90)
+    def ask_a1(self): self.declare(NextQuestion(ident='has_symptom_soft_lump'))
+    cls.ask_a1 = ask_a1
 
-    @Rule(Answer(ident="stress", text=MATCH.response), Fact(condition_group="psoriasis_likely"))
-    def psoriasis_triggers(self, response):
-        self.declare(Fact(next="infections"))
-    cls.psoriasis_triggers = psoriasis_triggers
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='no'), NOT(Answer(ident='has_symptom_firm_lump')), salience=89)
+    def ask_a2(self): self.declare(NextQuestion(ident='has_symptom_firm_lump'))
+    cls.ask_a2 = ask_a2
 
-    @Rule(Answer(ident="infections", text=MATCH.response), Fact(condition_group="psoriasis_likely"))
-    def psoriasis_location(self, response):
-        self.declare(Fact(next="psoriasis_locations"))
-    cls.psoriasis_location = psoriasis_location
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='no'), Answer(ident='has_symptom_firm_lump', text='no'), NOT(Answer(ident='has_symptom_rough_bumps')), salience=88)
+    def ask_a3(self): self.declare(
+        NextQuestion(ident='has_symptom_rough_bumps'))
+    cls.ask_a3 = ask_a3
 
-    # Eczema path
-    @Rule(Answer(ident="redness_and_inflammation", text="yes"), Fact(condition_group="eczema_likely"))
-    def eczema_path(self):
-        self.declare(Fact(next="crusting_or_oozing"))
-    cls.eczema_path = eczema_path
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='no'), Answer(ident='has_symptom_firm_lump', text='no'), Answer(ident='has_symptom_rough_bumps', text='no'), NOT(Answer(ident='has_symptom_waxy_appearance')), salience=87)
+    def ask_a5(self): self.declare(
+        NextQuestion(ident='has_symptom_waxy_appearance'))
+    cls.ask_a5 = ask_a5
 
-    @Rule(Answer(ident="crusting_or_oozing", text=MATCH.response), Fact(condition_group="eczema_likely"))
-    def eczema_triggers(self, response):
-        self.declare(Fact(next="allergens"))
-    cls.eczema_triggers = eczema_triggers
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='no'), Answer(ident='has_symptom_firm_lump', text='no'), Answer(ident='has_symptom_rough_bumps', text='no'), Answer(ident='has_symptom_waxy_appearance', text='no'), NOT(Answer(ident='has_symptom_evolution_of_mole')), salience=86)
+    def ask_a6(self): self.declare(NextQuestion(
+        ident='has_symptom_evolution_of_mole'))
+    cls.ask_a6 = ask_a6
 
-    @Rule(Answer(ident="allergens", text=MATCH.response), Fact(condition_group="eczema_likely"))
-    def eczema_location(self, response):
-        self.declare(Fact(next="eczema_locations"))
-    cls.eczema_location = eczema_location
+    @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='no'), Answer(ident='has_symptom_firm_lump', text='no'), Answer(ident='has_symptom_rough_bumps', text='no'), Answer(ident='has_symptom_waxy_appearance', text='no'), Answer(ident='has_symptom_evolution_of_mole', text='no'), NOT(Answer(ident='has_symptom_sore_that_wont_heal')), salience=85)
+    def ask_a7(self): self.declare(NextQuestion(
+        ident='has_symptom_sore_that_wont_heal'))
+    cls.ask_a7 = ask_a7
 
-    # Fungal/Contact Sub-branch
-    @Rule(Answer(ident="ring_shaped_rash", text="yes"), Fact(sub_branch="fungal_contact"))
-    def fungal_path(self):
-        self.declare(Fact(next="scaly_skin"))
-        self.declare(Fact(condition_group="fungal_likely"))
-    cls.fungal_path = fungal_path
+    @Rule(Answer(ident='has_symptom_sore_that_wont_heal', text='yes'), NOT(Answer(ident='has_symptom_persistent_scaly_patch')), salience=83)
+    def ask_a7_followup1(self): self.declare(
+        NextQuestion(ident='has_symptom_persistent_scaly_patch'))
+    cls.ask_a7_followup1 = ask_a7_followup1
 
-    @Rule(Answer(ident="ring_shaped_rash", text="no"), Fact(sub_branch="fungal_contact"))
-    def contact_path(self):
-        self.declare(Fact(next="rash"))
-        self.declare(Fact(condition_group="contact_likely"))
-    cls.contact_path = contact_path
+    # --- Branch B: Hair & Nails ---
 
-    # Fungal infection path
-    @Rule(Answer(ident="scaly_skin", text=MATCH.response), Fact(condition_group="fungal_likely"))
-    def fungal_environment(self, response):
-        self.declare(Fact(next="warm_moist_environments"))
-    cls.fungal_environment = fungal_environment
+    @Rule(Answer(ident='affects_nails_or_hair', text='yes'), NOT(Answer(ident='has_symptom_patchy_hair_loss')), salience=90)
+    def ask_b1(self): self.declare(NextQuestion(
+        ident='has_symptom_patchy_hair_loss'))
+    cls.ask_b1 = ask_b1
 
-    @Rule(Answer(ident="warm_moist_environments", text=MATCH.response), Fact(condition_group="fungal_likely"))
-    def fungal_location(self, response):
-        self.declare(Fact(next="fungal_locations"))
-    cls.fungal_location = fungal_location
+    @Rule(Answer(ident='affects_nails_or_hair', text='yes'), Answer(ident='has_symptom_patchy_hair_loss', text='no'), NOT(Answer(ident='has_symptom_nail_pitting')), salience=89)
+    def ask_b2(self): self.declare(
+        NextQuestion(ident='has_symptom_nail_pitting'))
+    cls.ask_b2 = ask_b2
 
-    # Contact dermatitis path
-    @Rule(Answer(ident="rash", text="yes"), Fact(condition_group="contact_likely"))
-    def contact_blisters(self):
-        self.declare(Fact(next="blisters"))
-    cls.contact_blisters = contact_blisters
+    @Rule(Answer(ident='affects_nails_or_hair', text='yes'), Answer(ident='has_symptom_patchy_hair_loss', text='no'), Answer(ident='has_symptom_nail_pitting', text='no'), NOT(Answer(ident='has_symptom_nail_thickening')), salience=88)
+    def ask_b3(self): self.declare(
+        NextQuestion(ident='has_symptom_nail_thickening'))
+    cls.ask_b3 = ask_b3
 
-    @Rule(Answer(ident="blisters", text=MATCH.response), Fact(condition_group="contact_likely"))
-    def contact_triggers(self, response):
-        self.declare(Fact(next="plants"))
-    cls.contact_triggers = contact_triggers
+    @Rule(Answer(ident='affects_nails_or_hair', text='yes'), Answer(ident='has_symptom_patchy_hair_loss', text='no'), Answer(ident='has_symptom_nail_pitting', text='no'), Answer(ident='has_symptom_nail_thickening', text='no'), NOT(Answer(ident='has_symptom_nail_concavity')), salience=87)
+    def ask_b4(self): self.declare(
+        NextQuestion(ident='has_symptom_nail_concavity'))
+    cls.ask_b4 = ask_b4
 
-    @Rule(Answer(ident="plants", text=MATCH.response), Fact(condition_group="contact_likely"))
-    def contact_location(self, response):
-        self.declare(Fact(next="contact_locations"))
-    cls.contact_location = contact_location
+    @Rule(Answer(ident='affects_nails_or_hair', text='yes'), Answer(ident='has_symptom_patchy_hair_loss', text='no'), Answer(ident='has_symptom_nail_pitting', text='no'), Answer(ident='has_symptom_nail_thickening', text='no'), Answer(ident='has_symptom_nail_concavity', text='no'), NOT(Answer(ident='has_symptom_nail_fold_swelling')), salience=86)
+    def ask_b5(self): self.declare(NextQuestion(
+        ident='has_symptom_nail_fold_swelling'))
+    cls.ask_b5 = ask_b5
 
-    # NON-ITCHY CONDITIONS BRANCH
-    @Rule(Answer(ident="painful_blisters", text="yes"), Fact(branch="non_itchy_conditions"))
-    def viral_path(self):
-        self.declare(Fact(next="tingling_or_burning_before_rash"))
-        self.declare(Fact(condition_group="viral_likely"))
-    cls.viral_path = viral_path
+    @Rule(Answer(ident='affects_nails_or_hair', text='yes'), Answer(ident='has_symptom_patchy_hair_loss', text='no'), Answer(ident='has_symptom_nail_pitting', text='no'), Answer(ident='has_symptom_nail_thickening', text='no'), Answer(ident='has_symptom_nail_concavity', text='no'), Answer(ident='has_symptom_nail_fold_swelling', text='no'), NOT(Answer(ident='has_symptom_transverse_nail_grooves')), salience=85)
+    def ask_b6(self): self.declare(NextQuestion(
+        ident='has_symptom_transverse_nail_grooves'))
+    cls.ask_b6 = ask_b6
 
-    @Rule(Answer(ident="painful_blisters", text="no"), Fact(branch="non_itchy_conditions"))
-    def growth_nail_path(self):
-        self.declare(Fact(next="soft_lump_under_skin"))
-        self.declare(Fact(sub_branch="growths_nails"))
-    cls.growth_nail_path = growth_nail_path
+    # --- Branch C: Rashes ---
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), NOT(Answer(ident='has_symptom_itching')), salience=90)
+    def ask_c_itch_test(self): self.declare(
+        NextQuestion(ident='has_symptom_itching'))
+    cls.ask_c_itch_test = ask_c_itch_test
 
-    # Viral infection path
-    @Rule(Answer(ident="tingling_or_burning_before_rash", text=MATCH.response), Fact(condition_group="viral_likely"))
-    def viral_triggers(self, response):
-        self.declare(Fact(next="stress"))
-    cls.viral_triggers = viral_triggers
+    # --- Sub-Branch C.2: Itchy Rashes ---
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), NOT(Answer(ident='has_symptom_worse_at_night')), salience=80)
+    def ask_c2_1(self): self.declare(
+        NextQuestion(ident='has_symptom_worse_at_night'))
+    cls.ask_c2_1 = ask_c2_1
 
-    @Rule(Answer(ident="stress", text=MATCH.response), Fact(condition_group="viral_likely"))
-    def viral_location(self, response):
-        self.declare(Fact(next="viral_locations"))
-    cls.viral_location = viral_location
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_worse_at_night', text='no'), NOT(Answer(ident='has_symptom_dryness')), salience=79)
+    def ask_c2_2(self): self.declare(NextQuestion(ident='has_symptom_dryness'))
+    cls.ask_c2_2 = ask_c2_2
 
-    # Growths/Nails Sub-branch
-    @Rule(Answer(ident="soft_lump_under_skin", text="yes"), Fact(sub_branch="growths_nails"))
-    def benign_growth_path(self):
-        self.declare(Fact(next="slow_growth"))
-        self.declare(Fact(condition_group="benign_likely"))
-    cls.benign_growth_path = benign_growth_path
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_worse_at_night', text='no'), Answer(ident='has_symptom_dryness', text='no'), NOT(Answer(ident='has_symptom_ring_shaped_rash')), salience=78)
+    def ask_c2_3(self): self.declare(
+        NextQuestion(ident='has_symptom_ring_shaped_rash'))
+    cls.ask_c2_3 = ask_c2_3
 
-    @Rule(Answer(ident="soft_lump_under_skin", text="no"), Fact(sub_branch="growths_nails"))
-    def nail_or_serious_path(self):
-        self.declare(Fact(next="thickened_nails"))
-        self.declare(Fact(sub_branch="nails_serious"))
-    cls.nail_or_serious_path = nail_or_serious_path
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_worse_at_night', text='no'), Answer(ident='has_symptom_dryness', text='no'), Answer(ident='has_symptom_ring_shaped_rash', text='no'), NOT(Answer(ident='has_symptom_white_patches')), salience=77)
+    def ask_c2_4(self): self.declare(
+        NextQuestion(ident='has_symptom_white_patches'))
+    cls.ask_c2_4 = ask_c2_4
 
-    # Benign growth path
-    @Rule(Answer(ident="slow_growth", text=MATCH.response), Fact(condition_group="benign_likely"))
-    def benign_age_check(self, response):
-        self.declare(Fact(next="aging"))
-    cls.benign_age_check = benign_age_check
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_worse_at_night', text='no'), Answer(ident='has_symptom_dryness', text='no'), Answer(ident='has_symptom_ring_shaped_rash', text='no'), Answer(ident='has_symptom_white_patches', text='no'), NOT(Answer(ident='has_symptom_blisters')), salience=76)
+    def ask_c2_5_blisters(self): self.declare(
+        NextQuestion(ident='has_symptom_blisters'))
+    cls.ask_c2_5_blisters = ask_c2_5_blisters
 
-    @Rule(Answer(ident="aging", text=MATCH.response), Fact(condition_group="benign_likely"))
-    def benign_location(self, response):
-        self.declare(Fact(next="benign_locations"))
-    cls.benign_location = benign_location
+    @Rule(Answer(ident='has_symptom_blisters', text='yes'), NOT(Answer(ident='trigger_contact_related')), salience=75)
+    def ask_c2_5_contact(self): self.declare(
+        NextQuestion(ident='trigger_contact_related'))
+    cls.ask_c2_5_contact = ask_c2_5_contact
 
-    # Nails/Serious Sub-branch
-    @Rule(Answer(ident="thickened_nails", text="yes"), Fact(sub_branch="nails_serious"))
-    def nail_path(self):
-        self.declare(Fact(next="discoloration"))
-        self.declare(Fact(condition_group="nail_likely"))
-    cls.nail_path = nail_path
+    @Rule(Answer(ident='has_symptom_blisters', text='yes'), Answer(ident='trigger_contact_related', text='no'), NOT(Answer(ident='has_symptom_large_tense_blisters')), salience=74)
+    def ask_c2_5_tense(self): self.declare(
+        NextQuestion(ident='has_symptom_large_tense_blisters'))
+    cls.ask_c2_5_tense = ask_c2_5_tense
 
-    @Rule(Answer(ident="thickened_nails", text="no"), Fact(sub_branch="nails_serious"))
-    def serious_path(self):
-        self.declare(Fact(next="ulcer"))
-        self.declare(Fact(condition_group="serious_likely"))
-    cls.serious_path = serious_path
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_worse_at_night', text='no'), Answer(ident='has_symptom_dryness', text='no'), Answer(ident='has_symptom_ring_shaped_rash', text='no'), Answer(ident='has_symptom_white_patches', text='no'), Answer(ident='has_symptom_blisters', text='no'), NOT(Answer(ident='has_symptom_thick_patches')), salience=73)
+    def ask_c2_6(self): self.declare(
+        NextQuestion(ident='has_symptom_thick_patches'))
+    cls.ask_c2_6 = ask_c2_6
 
-    # Nail disorder path
-    @Rule(Answer(ident="discoloration", text=MATCH.response), Fact(condition_group="nail_likely"))
-    def nail_triggers(self, response):
-        self.declare(Fact(next="moisture_exposure"))
-    cls.nail_triggers = nail_triggers
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_worse_at_night', text='no'), Answer(ident='has_symptom_dryness', text='no'), Answer(ident='has_symptom_ring_shaped_rash', text='no'), Answer(ident='has_symptom_white_patches', text='no'), Answer(ident='has_symptom_blisters', text='no'), Answer(ident='has_symptom_thick_patches', text='no'), NOT(Answer(ident='has_symptom_pimples')), salience=72)
+    def ask_c2_7(self): self.declare(NextQuestion(ident='has_symptom_pimples'))
+    cls.ask_c2_7 = ask_c2_7
 
-    @Rule(Answer(ident="moisture_exposure", text=MATCH.response), Fact(condition_group="nail_likely"))
-    def nail_location(self, response):
-        self.declare(Fact(next="nail_locations"))
-    cls.nail_location = nail_location
+    # --- Sub-Branch C.3: Non-Itchy Rashes ---
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='no'), NOT(Answer(ident='has_symptom_unilateral_rash')), salience=70)
+    def ask_c3_1(self): self.declare(
+        NextQuestion(ident='has_symptom_unilateral_rash'))
+    cls.ask_c3_1 = ask_c3_1
 
-    # Serious conditions path
-    @Rule(Answer(ident="ulcer", text="yes"), Fact(condition_group="serious_likely"))
-    def malignant_path(self):
-        self.declare(Fact(next="pain"))
-    cls.malignant_path = malignant_path
+    @Rule(Answer(ident='has_symptom_unilateral_rash', text='yes'), NOT(Answer(ident='has_symptom_pain')), salience=69)
+    def ask_c3_1_pain(self): self.declare(
+        NextQuestion(ident='has_symptom_pain'))
+    cls.ask_c3_1_pain = ask_c3_1_pain
 
-    @Rule(Answer(ident="ulcer", text="no"), Fact(condition_group="serious_likely"))
-    def systemic_path(self):
-        self.declare(Fact(next="joint_pain"))
-    cls.systemic_path = systemic_path
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='no'), Answer(ident='has_symptom_unilateral_rash', text='no'), NOT(Answer(ident='has_symptom_bulls_eye_rash')), salience=68)
+    def ask_c3_2(self): self.declare(
+        NextQuestion(ident='has_symptom_bulls_eye_rash'))
+    cls.ask_c3_2 = ask_c3_2
 
-    @Rule(Answer(ident="pain", text=MATCH.response), Fact(condition_group="serious_likely"))
-    def malignant_location(self, response):
-        self.declare(Fact(next="malignant_locations"))
-    cls.malignant_location = malignant_location
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='no'), Answer(ident='has_symptom_unilateral_rash', text='no'), Answer(ident='has_symptom_bulls_eye_rash', text='no'), NOT(Answer(ident='has_symptom_butterfly_rash')), salience=67)
+    def ask_c3_3(self): self.declare(
+        NextQuestion(ident='has_symptom_butterfly_rash'))
+    cls.ask_c3_3 = ask_c3_3
 
-    @Rule(Answer(ident="joint_pain", text=MATCH.response), Fact(condition_group="serious_likely"))
-    def systemic_location(self, response):
-        # Using malignant_locations for systemic too
-        self.declare(Fact(next="malignant_locations"))
-    cls.systemic_location = systemic_location
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='no'), Answer(ident='has_symptom_unilateral_rash', text='no'), Answer(ident='has_symptom_bulls_eye_rash', text='no'), Answer(ident='has_symptom_butterfly_rash', text='no'), NOT(Answer(ident='has_symptom_painful_blisters')), salience=66)
+    def ask_c3_4(self): self.declare(
+        NextQuestion(ident='has_symptom_painful_blisters'))
+    cls.ask_c3_4 = ask_c3_4
 
+<<<<<<< Updated upstream
     # CELLULITIS BRANCH
     @Rule(Answer(ident="redness", text="yes"))
     def cellulitis_branch(self):
@@ -411,15 +379,62 @@ def apply_question_flow(cls):
         "scabies_locations",
         "lyme_disease_locations",
     ]
+=======
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='no'), Answer(ident='has_symptom_unilateral_rash', text='no'), Answer(ident='has_symptom_bulls_eye_rash', text='no'), Answer(ident='has_symptom_butterfly_rash', text='no'), Answer(ident='has_symptom_painful_blisters', text='no'), NOT(Answer(ident='has_symptom_honey_colored_crusts')), salience=65)
+    def ask_c3_5(self): self.declare(NextQuestion(
+        ident='has_symptom_honey_colored_crusts'))
+    cls.ask_c3_5 = ask_c3_5
+>>>>>>> Stashed changes
 
-    for location in terminal_locations:
-        def make_terminal_rule(loc):
-            def terminal_rule(self, response):
-                self.declare(Fact(next=None))
-                self.declare(Fact(diagnosis_ready=True))
-            terminal_rule.__name__ = f"end_at_{loc}"
-            return Rule(Answer(ident=loc, text=MATCH.response))(terminal_rule)
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='no'), Answer(ident='has_symptom_unilateral_rash', text='no'), Answer(ident='has_symptom_bulls_eye_rash', text='no'), Answer(ident='has_symptom_butterfly_rash', text='no'), Answer(ident='has_symptom_painful_blisters', text='no'), Answer(ident='has_symptom_honey_colored_crusts', text='no'), NOT(Answer(ident='has_symptom_spreading_redness')), salience=64)
+    def ask_c3_6(self): self.declare(
+        NextQuestion(ident='has_symptom_spreading_redness'))
+    cls.ask_c3_6 = ask_c3_6
 
-        setattr(cls, f"end_at_{location}", make_terminal_rule(location))
+    @Rule(Answer(ident='has_symptom_spreading_redness', text='yes'), NOT(Answer(ident='has_symptom_warmth')), salience=63)
+    def ask_c3_6_warmth(self): self.declare(
+        NextQuestion(ident='has_symptom_warmth'))
+    cls.ask_c3_6_warmth = ask_c3_6_warmth
+
+    @Rule(Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='no'), Answer(ident='has_symptom_unilateral_rash', text='no'), Answer(ident='has_symptom_bulls_eye_rash', text='no'), Answer(ident='has_symptom_butterfly_rash', text='no'), Answer(ident='has_symptom_painful_blisters', text='no'), Answer(ident='has_symptom_honey_colored_crusts', text='no'), Answer(ident='has_symptom_spreading_redness', text='no'), NOT(Answer(ident='has_symptom_symmetrical_red_rash')), salience=62)
+    def ask_c3_7(self): self.declare(NextQuestion(
+        ident='has_symptom_symmetrical_red_rash'))
+    cls.ask_c3_7 = ask_c3_7
+
+    @Rule(Answer(ident='has_symptom_symmetrical_red_rash', text='yes'), NOT(Answer(ident='trigger_medications')), salience=61)
+    def ask_c3_7_trigger(self): self.declare(
+        NextQuestion(ident='trigger_medications'))
+    cls.ask_c3_7_trigger = ask_c3_7_trigger
+
+    # --- Branch D: Other conditions ---
+    @Rule(Answer(ident='has_symptom_palpable_purpura', text='no'), NOT(Answer(ident='has_symptom_loss_of_pigment')), salience=50)
+    def ask_d2(self): self.declare(
+        NextQuestion(ident='has_symptom_loss_of_pigment'))
+    cls.ask_d2 = ask_d2
+
+    @Rule(Answer(ident='has_symptom_palpable_purpura', text='no'), Answer(ident='has_symptom_loss_of_pigment', text='no'), NOT(Answer(ident='has_symptom_brown_or_gray_patches')), salience=49)
+    def ask_d3(self): self.declare(NextQuestion(
+        ident='has_symptom_brown_or_gray_patches'))
+    cls.ask_d3 = ask_d3
+
+    @Rule(Answer(ident='has_symptom_palpable_purpura', text='no'), Answer(ident='has_symptom_loss_of_pigment', text='no'), Answer(ident='has_symptom_brown_or_gray_patches', text='no'), NOT(Answer(ident='has_symptom_discolored_patches')), salience=48)
+    def ask_d4(self): self.declare(NextQuestion(
+        ident='has_symptom_discolored_patches'))
+    cls.ask_d4 = ask_d4
+
+    @Rule(Answer(ident='has_symptom_palpable_purpura', text='no'), Answer(ident='has_symptom_loss_of_pigment', text='no'), Answer(ident='has_symptom_brown_or_gray_patches', text='no'), Answer(ident='has_symptom_discolored_patches', text='no'), NOT(Answer(ident='has_symptom_central_dimple')), salience=47)
+    def ask_d5(self): self.declare(
+        NextQuestion(ident='has_symptom_central_dimple'))
+    cls.ask_d5 = ask_d5
+
+    @Rule(Answer(ident='has_symptom_palpable_purpura', text='no'), Answer(ident='has_symptom_loss_of_pigment', text='no'), Answer(ident='has_symptom_brown_or_gray_patches', text='no'), Answer(ident='has_symptom_discolored_patches', text='no'), Answer(ident='has_symptom_central_dimple', text='no'), NOT(Answer(ident='has_symptom_rough_scaly_patch')), salience=46)
+    def ask_d6(self): self.declare(NextQuestion(
+        ident='has_symptom_rough_scaly_patch'))
+    cls.ask_d6 = ask_d6
+
+    @Rule(Answer(ident='has_symptom_palpable_purpura', text='no'), Answer(ident='has_symptom_loss_of_pigment', text='no'), Answer(ident='has_symptom_brown_or_gray_patches', text='no'), Answer(ident='has_symptom_discolored_patches', text='no'), Answer(ident='has_symptom_central_dimple', text='no'), Answer(ident='has_symptom_rough_scaly_patch', text='no'), NOT(Answer(ident='has_symptom_persistent_redness')), salience=45)
+    def ask_d7(self): self.declare(NextQuestion(
+        ident='has_symptom_persistent_redness'))
+    cls.ask_d7 = ask_d7
 
     return cls

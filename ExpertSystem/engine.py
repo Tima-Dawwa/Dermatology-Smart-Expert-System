@@ -1,84 +1,60 @@
 from ExpertSystem.facts import *
-from ExpertSystem.Data.disease import diseases
-from ExpertSystem.Questions.question import basic_questions
-from ExpertSystem.Questions.question_flow import apply_question_flow
+# Correctly import the data and the new lookup function
+from ExpertSystem.Data.disease import diseases, create_disease_lookup, DURATION_MAPPING
+from ExpertSystem.Questions.question import get_question_by_ident
 from experta import *
+
+# Create the lookup dictionary once when the module is loaded
+disease_info_lookup = create_disease_lookup()
 
 
 class DermatologyExpert(KnowledgeEngine):
-
     def __init__(self):
         super().__init__()
-        self.patient_age = None
-        self.condition_duration = None  # Add duration tracking
 
     @DefFacts()
-    def initial_questions(self):
-        for d in diseases:
-            yield d
-        for q in basic_questions:
-            yield q
+    def _initial_action(self):
+        """Initial facts to start the engine."""
+        yield Fact(start=True)
+        self.best_diagnosis = None
 
-    @Rule(
-        Fact(next=MATCH.next_q),
-        question(ident=MATCH.next_q, text=MATCH.text,
-                 valid=MATCH.valid, Type=MATCH.Type),
-        NOT(Answer(ident=MATCH.next_q)),
-    )
-    def ask_next_question(self, next_q, text, valid, Type):
-        for fact in self.facts.values():
-            if isinstance(fact, Diagnosis):
-                return
-        response = self.ask_user(text, Type, valid)
-        cf = 1.0 if response == "yes" else 0.0
-        self.declare(Answer(ident=next_q, text=response, cf=cf))
-
-        # Capture age for later use
-        if next_q == "age_range":
-            self.patient_age = self.parse_age_range(response)
-
-        # Capture duration for later use
-        elif next_q == "common_duration":
-            self.condition_duration = self.parse_duration(response)
-
-    def parse_age_range(self, age_response):
-        """Parse age range response and return midpoint for calculations"""
-        age_mappings = {
-            "child (0-12)": 6,
-            "teenager (13-19)": 16,
-            "young adult (20-35)": 27,
-            "middle-aged (36-55)": 45,
-            "senior (56+)": 65
-        }
-        # Default to 30 if unknown
-        return age_mappings.get(age_response.lower(), 30)
-
-    def parse_duration(self, duration_response):
-        """Parse duration response and return value in days for calculations"""
-        duration_mappings = {
-            "less than 1 week": 3,
-            "1-2 weeks": 10,
-            "2-4 weeks": 21,
-            "1-3 months": 60,
-            "3-6 months": 135,
-            "6 months - 1 year": 270,
-            "more than 1 year": 500
-        }
-        # Default to 30 days if unknown
-        return duration_mappings.get(duration_response.lower(), 30)
-
-    def ask_user(self, question_text, Type, valid=None):
+    def ask_user(self, question_text, valid_responses, question_type):
+        """Handles the user interaction (I/O) for both text and numbers."""
         print("\n🧐 " + question_text)
-        if Type == "multi" and valid:
-            print(f"Valid responses: {', '.join(valid)}")
-        response = input("Your answer: ").strip().lower()
-        return response
 
-    @Rule(Fact(next=None))
-    def diagnosis_complete(self):
-        self.declare(Fact(diagnosis_complete=True))
+        if question_type == 'number':
+            # Loop until a valid number is entered
+            while True:
+                response = input("Your answer (as a number): ").strip()
+                if response.isdigit():
+                    return response
+                else:
+                    print("Invalid input. Please enter a valid number.")
+        else:
+            # Handle multiple choice questions
+            if valid_responses:
+                print(f"Valid responses: {', '.join(valid_responses)}")
+            while True:
+                response = input("Your answer: ").strip().lower()
+                if not valid_responses or response in valid_responses:
+                    return response
+                else:
+                    print(
+                        f"Invalid response. Please enter one of: {', '.join(valid_responses)}")
+
+    @Rule(NextQuestion(ident=MATCH.ident), NOT(Answer(ident=MATCH.ident)), salience=200)
+    def ask_question(self, ident):
+        """Generic rule to ask the next question, now handling question types."""
+        question = get_question_by_ident(ident)
+        question_text = question['text']
+        valid_responses = question['valid']
+        question_type = question['Type']
+
+        response = self.ask_user(question_text, valid_responses, question_type)
+        self.declare(Answer(ident=ident, text=response))
 
     def combine_cf(self, cf1, cf2):
+        """Combine confidence factors using standard CF algebra."""
         if cf1 >= 0 and cf2 >= 0:
             return cf1 + cf2 * (1 - cf1)
         elif cf1 < 0 and cf2 < 0:
@@ -86,146 +62,72 @@ class DermatologyExpert(KnowledgeEngine):
         else:
             return (cf1 + cf2) / (1 - min(abs(cf1), abs(cf2)))
 
-    def calculate_age_factor(self, disease_name):
-        """Calculate age-based confidence factor for a disease"""
-        if self.patient_age is None:
-            return 1.0  # No age adjustment if age unknown
-
-        # Find the disease info
-        disease_info = None
-        for fact in self.facts.values():
-            if isinstance(fact, DiseaseInfo) and fact["name"] == disease_name:
-                disease_info = fact
-                break
-
-        if not disease_info:
-            return 1.0
-
-        age_min = disease_info.get("age_min", 0)
-        age_max = disease_info.get("age_max", 100)
-
-        # If patient age is within typical range, no penalty
-        if age_min <= self.patient_age <= age_max:
-            return 1.0
-
-        # Calculate penalty based on how far outside the range
-        if self.patient_age < age_min:
-            distance = age_min - self.patient_age
-        else:
-            distance = self.patient_age - age_max
-
-        # Apply exponential decay penalty - more distance = lower confidence
-        # Maximum penalty is 50% (factor of 0.5)
-        penalty_factor = max(0.5, 1.0 - (distance / 50.0))
-        return penalty_factor
-
-    def calculate_duration_factor(self, disease_name):
-        """Calculate duration-based confidence factor for a disease"""
-        if self.condition_duration is None:
-            return 1.0  # No duration adjustment if duration unknown
-
-        # Find the disease info
-        disease_info = None
-        for fact in self.facts.values():
-            if isinstance(fact, DiseaseInfo) and fact["name"] == disease_name:
-                disease_info = fact
-                break
-
-        if not disease_info:
-            return 1.0
-
-        # Get typical duration range for the disease (in days)
-        duration_min = disease_info.get("duration_min", 1)
-        duration_max = disease_info.get("duration_max", 365)
-
-        # If condition duration is within typical range, no penalty
-        if duration_min <= self.condition_duration <= duration_max:
-            return 1.0
-
-        # Calculate penalty based on how far outside the range
-        if self.condition_duration < duration_min:
-            # Condition too short for this disease
-            distance = duration_min - self.condition_duration
-            penalty_factor = max(0.6, 1.0 - (distance / duration_min * 0.4))
-        else:
-            # Condition too long for this disease
-            distance = self.condition_duration - duration_max
-            penalty_factor = max(0.7, 1.0 - (distance / duration_max * 0.3))
-
-        return penalty_factor
-
-    def get_duration_category(self):
-        """Get duration category string for display"""
-        if self.condition_duration is None:
-            return "Unknown"
-        elif self.condition_duration <= 7:
-            return "Less than 1 week"
-        elif self.condition_duration <= 14:
-            return "1-2 weeks"
-        elif self.condition_duration <= 30:
-            return "2-4 weeks"
-        elif self.condition_duration <= 90:
-            return "1-3 months"
-        elif self.condition_duration <= 180:
-            return "3-6 months"
-        elif self.condition_duration <= 365:
-            return "6 months - 1 year"
-        else:
-            return "More than 1 year"
-
     def declare_or_update_diagnosis(self, disease, reasoning, new_cf):
-        # Apply age-based adjustment
-        age_factor = self.calculate_age_factor(disease)
+        """
+        Declares a new diagnosis or updates an existing one, automatically
+        adjusting the CF based on the patient's age, symptom duration, and severity.
+        """
+        # --- Base CF ---
+        final_new_cf = new_cf
+        disease_info = disease_info_lookup.get(disease, {})
 
-        # Apply duration-based adjustment
-        duration_factor = self.calculate_duration_factor(disease)
+        # --- Age Logic ---
+        age_answer = next((f for f in self.facts.values() if isinstance(
+            f, Answer) and f.get("ident") == "age"), None)
+        if age_answer:
+            age_min = disease_info.get('age_min')
+            age_max = disease_info.get('age_max')
+            if age_min is not None and age_max is not None:
+                try:
+                    user_age = int(age_answer['text'])
+                    if age_min <= user_age <= age_max:
+                        final_new_cf = self.combine_cf(
+                            final_new_cf, 0.15)  # Boost for age match
+                    else:
+                        final_new_cf = self.combine_cf(
+                            final_new_cf, -0.2)  # Penalty for age mismatch
+                except ValueError:
+                    pass
 
-        # Combine both adjustments
-        adjusted_cf = new_cf * age_factor * duration_factor
+        # --- Duration Logic ---
+        duration_answer = next((f for f in self.facts.values() if isinstance(
+            f, Answer) and f.get("ident") == "duration"), None)
+        if duration_answer:
+            disease_duration = disease_info.get('common_duration')
+            user_duration_text = duration_answer['text']
 
-        # Add adjustment notes if adjustments were made
-        adjustment_notes = []
-        if age_factor < 1.0:
-            adjustment_notes.append(f"Age-adjusted: {age_factor:.2f}")
-        if duration_factor < 1.0:
-            adjustment_notes.append(
-                f"Duration-adjusted: {duration_factor:.2f}")
+            long_term_user_durations = [
+                "weeks to months", "months to years", "chronic", "chronic with flares"]
+            short_term_disease_durations = [
+                "1-2 weeks", "1-3 weeks", "2-4 weeks", "days to weeks"]
 
-        if adjustment_notes:
-            adjustment_note = f" ({', '.join(adjustment_notes)})"
-            reasoning += adjustment_note
+            if user_duration_text in long_term_user_durations and disease_duration in short_term_disease_durations:
+                # Strong penalty for mismatch
+                final_new_cf = self.combine_cf(final_new_cf, -0.4)
+            elif disease_duration in DURATION_MAPPING.get(user_duration_text, []):
+                final_new_cf = self.combine_cf(
+                    final_new_cf, 0.1)  # Small boost for match
 
-        for fact in self.facts.values():
-            if isinstance(fact, Diagnosis) and fact["disease"] == disease:
-                combined_cf = self.combine_cf(fact["cf"], adjusted_cf)
-                self.modify(fact, cf=combined_cf, reasoning=reasoning +
-                            f" (updated CF: {combined_cf:.2f})")
-                return
-        self.declare(Diagnosis(disease=disease,
-                     reasoning=reasoning, cf=adjusted_cf))
+        # --- Severity Logic ---
+        severity_answer = next((f for f in self.facts.values() if isinstance(
+            f, Answer) and f.get("ident") == "severity"), None)
+        if severity_answer:
+            disease_severity_levels = disease_info.get('severity_levels', [])
+            user_severity = severity_answer['text']
 
-    # ECZEMA/ATOPIC DERMATITIS RULES
-    @Rule(Answer(ident="itching", text="yes", cf=MATCH.cf1),
-          Answer(ident="dryness", text="yes", cf=MATCH.cf2),
-          Answer(ident="redness_and_inflammation", text="yes", cf=MATCH.cf3))
-    def diagnose_eczema_comprehensive(self, cf1, cf2, cf3):
-        cf = self.combine_cf(cf1, self.combine_cf(cf2, cf3))
-        self.declare_or_update_diagnosis(
-            disease="Eczema",
-            reasoning="Itching, dryness, and inflammation are key symptoms of eczema.",
-            new_cf=cf * 0.9
-        )
+            if disease_severity_levels:
+                if user_severity in disease_severity_levels:
+                    final_new_cf = self.combine_cf(
+                        final_new_cf, 0.15)  # Boost for severity match
+                else:
+                    final_new_cf = self.combine_cf(
+                        final_new_cf, -0.15)  # Penalty for mismatch
 
-    @Rule(Answer(ident="itching", text="yes", cf=MATCH.cf1),
-          Answer(ident="dry_skin", text="yes", cf=MATCH.cf2))
-    def diagnose_atopic_dermatitis(self, cf1, cf2):
-        cf = self.combine_cf(cf1, cf2)
-        self.declare_or_update_diagnosis(
-            disease="Atopic Dermatitis",
-            reasoning="Itching and dry skin are primary symptoms of atopic dermatitis.",
-            new_cf=cf * 0.85
-        )
+        # --- Update the diagnosis fact ---
+        existing_diagnosis = next((f for f in self.facts.values() if isinstance(
+            f, Diagnosis) and f.get("disease") == disease), None)
 
+<<<<<<< Updated upstream
     # PSORIASIS RULES
     @Rule(Answer(ident="scaling", text="yes", cf=MATCH.cf1),
           Answer(ident="redness", text="yes", cf=MATCH.cf2),
@@ -693,25 +595,53 @@ def diagnose_lyme_disease(self, cf1, cf2, cf3):
             print(
                 "Please consult a healthcare professional for proper diagnosis and treatment.")
             print("="*50)
+=======
+        if existing_diagnosis:
+            combined_cf = self.combine_cf(
+                existing_diagnosis["cf"], final_new_cf)
+            updated_reasoning = f"{existing_diagnosis.get('reasoning', '')}; {reasoning}"
+            self.retract(existing_diagnosis)
+            self.declare(Diagnosis(disease=disease,
+                         reasoning=updated_reasoning, cf=combined_cf))
+>>>>>>> Stashed changes
         else:
-            print(
-                "\n⚠️ No confident diagnosis could be made based on the provided symptoms.")
-            print(
-                "Consider providing more detailed information or consulting a healthcare professional.")
+            self.declare(Diagnosis(disease=disease,
+                         reasoning=reasoning, cf=final_new_cf))
 
-    def get_age_category(self):
-        """Get age category string for display"""
-        if self.patient_age <= 12:
-            return "Child (0-12)"
-        elif self.patient_age <= 19:
-            return "Teenager (13-19)"
-        elif self.patient_age <= 35:
-            return "Young Adult (20-35)"
-        elif self.patient_age <= 55:
-            return "Middle-aged (36-55)"
+    @Rule(NOT(NextQuestion(W())), NOT(Fact(id='results_printed')), salience=-1000)
+    def display_results(self):
+        """
+        Fires when no more questions are left. Finds the best diagnosis
+        and prints the final report.
+        """
+        self.declare(Fact(id='results_printed'))
+        all_diagnoses = [
+            f for f in self.facts.values() if isinstance(f, Diagnosis)]
+
+        if not all_diagnoses:
+            self.print_final_diagnoses(None)
+            return
+
+        best_diagnosis = max(all_diagnoses, key=lambda d: d['cf'])
+        self.best_diagnosis = best_diagnosis
+        self.print_final_diagnoses(best_diagnosis)
+
+    def print_final_diagnoses(self, diag):
+        """Prints the final, most likely diagnosis or a 'not found' message."""
+        print("\n" + "="*50)
+        print("🏥 FINAL DIAGNOSTIC RESULTS")
+        print("="*50)
+
+        if not diag:
+            print("⚠️ No diagnosis could be made based on the provided answers.")
         else:
-            return "Senior (56+)"
+            print(f"\nMost Likely Diagnosis: {diag['disease']}")
+            print(f"   Confidence: {diag['cf'] * 100:.1f}%")
+            if diag.get('reasoning'):
+                print(f"   Reasoning: {diag['reasoning']}")
 
-
-# Apply the question flow decorator
-apply_question_flow(DermatologyExpert)
+        print("\n" + "="*50)
+        print("⚠️  DISCLAIMER: This is a preliminary assessment.")
+        print(
+            "Please consult a healthcare professional for proper diagnosis and treatment.")
+        print("="*50)
