@@ -36,7 +36,7 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_sore_that_wont_heal', text='yes'), Answer(ident='has_symptom_persistent_scaly_patch', text='no'))
     def diagnose_bcc(self): self.declare_or_update_diagnosis(
         disease='Basal Cell Carcinoma',
-        reasoning="A Sore that wont heal but without scaly patches", cf=0.9)
+        reasoning="A Sore that wont heal but without scaly patches", new_cf=0.9)
     cls.diagnose_bcc = diagnose_bcc
 
     @Rule(NOT(Stop()), Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_waxy_appearance', text='yes'))
@@ -59,7 +59,7 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_sore_that_wont_heal', text='yes'), Answer(ident='has_symptom_persistent_scaly_patch', text='yes'))
     def diagnose_scc(self): self.declare_or_update_diagnosis(
         disease='Squamous Cell Carcinoma',
-        reasoning="a sore that wont heal and also scaly patches", cf=0.95)
+        reasoning="a sore that wont heal and also scaly patches", new_cf=0.95)
     cls.diagnose_scc = diagnose_scc
 
     # --- Branch B Diagnoses ---
@@ -132,7 +132,7 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_ring_shaped_rash', text='yes'), Answer(ident='locations', text='feet'))
     def diagnose_tinea_pedis(self): self.declare_or_update_diagnosis(
         disease="Tinea Pedis (Athlete's Foot)",
-        reasoning="Tinea Pedis usaully comes with a ring-shaped rash on the feet (for atheletes)", cf=0.9)
+        reasoning="Tinea Pedis usaully comes with a ring-shaped rash on the feet (for atheletes)", new_cf=0.9)
     cls.diagnose_tinea_pedis = diagnose_tinea_pedis
 
     @Rule(NOT(Stop()), Answer(ident='has_symptom_ring_shaped_rash', text='yes'), Answer(ident='locations', text='body'))
@@ -146,26 +146,26 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_white_patches', text='yes'))
     def diagnose_candidiasis(self): self.declare_or_update_diagnosis(
         disease='Candidiasis',
-        reasoning="Candidasis main symptom is white patches", cf=0.8)
+        reasoning="Candidasis main symptom is white patches", new_cf=0.8)
     cls.diagnose_candidiasis = diagnose_candidiasis
 
     @Rule(NOT(Stop()), Answer(ident='trigger_contact_related', text='yes'))
     def diagnose_contact_dermatitis(self): self.declare_or_update_diagnosis(
         disease='Contact Dermatitis',
-        reasoning="Contact Dermatitis is triggered by plants, metals, and new objects", cf=0.9)
+        reasoning="Contact Dermatitis is triggered by plants, metals, and new objects", new_cf=0.9)
     cls.diagnose_contact_dermatitis = diagnose_contact_dermatitis
 
     # here
     @Rule(NOT(Stop()), Answer(ident='has_symptom_large_tense_blisters', text='yes'))
     def diagnose_bullous_pemphigoid(self): self.declare_or_update_diagnosis(
         disease='Bullous Pemphigoid',
-        reasoning="Large tense blisters are often a symptom of Bullous Pemphigoid", cf=0.9)
+        reasoning="Large tense blisters are often a symptom of Bullous Pemphigoid", new_cf=0.9)
     cls.diagnose_bullous_pemphigoid = diagnose_bullous_pemphigoid
 
     @Rule(NOT(Stop()), Answer(ident='has_symptom_thick_patches', text='yes'))
     def diagnose_psoriasis(self): self.declare_or_update_diagnosis(
-        disease="Nail Psoriasis",
-        reasoning="Nail pitting is characteristic of nail psoriasis.",
+        disease="Psoriasis",
+        reasoning="Thick Pathcesis characteristic of psoriasis.",
         new_cf=0.85
     )
     cls.diagnose_psoriasis = diagnose_psoriasis
@@ -174,7 +174,7 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_pimples', text='yes'))
     def diagnose_acne_vulgaris(self): self.declare_or_update_diagnosis(
         disease='Acne Vulgaris',
-        reasoning="Usual Pimples are Acne", cf=0.85)
+        reasoning="Usual Pimples are Acne", new_cf=0.85)
     cls.diagnose_acne_vulgaris = diagnose_acne_vulgaris
 
     @Rule(NOT(Stop()), Answer(ident='has_symptom_unilateral_rash', text='yes'), Answer(ident='has_symptom_pain', text='yes'))
@@ -229,7 +229,7 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_symmetrical_red_rash', text='yes'), Answer(ident='trigger_medications', text='yes'))
     def diagnose_drug_rash(self): self.declare_or_update_diagnosis(
         disease='Drug-Induced Rash',
-        reasoning="A symmetrical red-rash after new drugs or medicines can induce this rash", cf=0.8)
+        reasoning="A symmetrical red-rash after new drugs or medicines can induce this rash", new_cf=0.8)
     cls.diagnose_drug_rash = diagnose_drug_rash
 
     # --- Branch D Diagnoses ---
@@ -245,14 +245,14 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_loss_of_pigment', text='yes'))
     def diagnose_vitiligo(self): self.declare_or_update_diagnosis(
         disease='Vitiligo',
-        reasoning="suddent loss of pigment of skin is Vitiligo", cf=0.9)
+        reasoning="suddent loss of pigment of skin is Vitiligo", new_cf=0.9)
     cls.diagnose_vitiligo = diagnose_vitiligo
 
     # here
     @Rule(NOT(Stop()), Answer(ident='has_symptom_brown_or_gray_patches', text='yes'))
     def diagnose_melasma(self): self.declare_or_update_diagnosis(
         disease='Melasma',
-        reasoning="brown or gray patches on the skin usually refers to Melasma", cf=0.85)
+        reasoning="brown or gray patches on the skin usually refers to Melasma", new_cf=0.85)
     cls.diagnose_melasma = diagnose_melasma
 
     @Rule(NOT(Stop()), Answer(ident='has_symptom_discolored_patches', text='yes'))
@@ -275,7 +275,7 @@ def apply_diagnostic_rules(cls):
     @Rule(NOT(Stop()), Answer(ident='has_symptom_rough_scaly_patch', text='yes'))
     def diagnose_actinic_keratosis(self): self.declare_or_update_diagnosis(
         disease='Actinic Keratosis',
-        reasoning="Rough and Scaly Patches are part of the Actinic Keratosis", cf=0.9)
+        reasoning="Rough and Scaly Patches are part of the Actinic Keratosis", new_cf=0.9)
     cls.diagnose_actinic_keratosis = diagnose_actinic_keratosis
 
     @Rule(NOT(Stop()), Answer(ident='has_symptom_persistent_redness', text='yes'))
