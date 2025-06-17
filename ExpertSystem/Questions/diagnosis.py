@@ -120,15 +120,48 @@ def apply_diagnostic_rules(cls):
     )
     cls.diagnose_scabies = diagnose_scabies
 
+    #  testing the cf for eczema
     @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_dryness', text='yes'))
-    def diagnose_eczema(self): self.declare_or_update_diagnosis(
-        disease="Eczema (Atopic Dermatitis)",
-        reasoning="High itching with high dryness is characteristic of eczema.",
-        new_cf=0.8
-    )
-    cls.diagnose_eczema = diagnose_eczema
+    def diagnose_eczema_primary(self):
+        self.declare_or_update_diagnosis(
+            disease="Eczema (Atopic Dermatitis)",
+            reasoning="Primary symptoms: itchy + dry rash",
+            new_cf=0.7
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='locations', text='face'))
+    def diagnose_eczema_location_face(self):
+        self.declare_or_update_diagnosis(
+            disease="Eczema (Atopic Dermatitis)",
+            reasoning="Common location: face involvement",
+            new_cf=0.4
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='locations', text='hands'))
+    def diagnose_eczema_location_hands(self):
+        self.declare_or_update_diagnosis(
+            disease="Eczema (Atopic Dermatitis)",
+            reasoning="Common location: hand involvement",
+            new_cf=0.35
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='severity', text='mild'))
+    def diagnose_eczema_mild_pattern(self):
+        self.declare_or_update_diagnosis(
+            disease="Eczema (Atopic Dermatitis)",
+            reasoning="Typical presentation: mild chronic pattern",
+            new_cf=0.3
+        )
+
+    cls.diagnose_eczema_primary = diagnose_eczema_primary
+    cls.diagnose_eczema_location_face = diagnose_eczema_location_face
+    cls.diagnose_eczema_location_hands = diagnose_eczema_location_hands
+    cls.diagnose_eczema_mild_pattern = diagnose_eczema_mild_pattern
+
+    # end testing the cf for eczema
 
     # here
+
     @Rule(NOT(Stop()), Answer(ident='has_symptom_ring_shaped_rash', text='yes'), Answer(ident='locations', text='feet'))
     def diagnose_tinea_pedis(self): self.declare_or_update_diagnosis(
         disease="Tinea Pedis (Athlete's Foot)",
