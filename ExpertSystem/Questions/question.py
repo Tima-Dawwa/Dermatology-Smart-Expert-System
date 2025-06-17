@@ -109,15 +109,15 @@ questions_list.append(
 )
 questions_list.append(
     question(ident='affects_nails_or_hair',
-             text="Are your symptoms primarily affecting your nails or hair?", valid=['yes', 'no']),
+             text="Are your symptoms primarily affecting your nails or hair?", valid=['yes', 'no'], Type='multi'),
 )
 questions_list.append(
     question(ident='trigger_contact_related',
-             text="Did the rash appear after coming into contact with a new substance, like a plant, metal, or lotion?", valid=['yes', 'no']),
+             text="Did the rash appear after coming into contact with a new substance, like a plant, metal, or lotion?", valid=['yes', 'no'], Type='multi'),
 )
 questions_list.append(
     question(ident='trigger_medications',
-             text="Did the rash appear after starting a new medication?", valid=['yes', 'no']),
+             text="Did the rash appear after starting a new medication?", valid=['yes', 'no'], Type='multi'),
 )
 
 # Helper to get questions data fast
