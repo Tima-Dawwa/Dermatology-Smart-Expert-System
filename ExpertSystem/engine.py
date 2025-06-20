@@ -62,11 +62,18 @@ class DermatologyExpert(KnowledgeEngine):
         else:
             return (cf1 + cf2) / (1 - min(abs(cf1), abs(cf2)))
 
+# REPLACE YOUR declare_or_update_diagnosis METHOD IN engine.py WITH THIS:
+
     def declare_or_update_diagnosis(self, disease, reasoning, new_cf):
         """
         Declares a new diagnosis or updates an existing one, automatically
         adjusting the CF based on the patient's age, symptom duration, and severity.
+        NOW WITH DEBUG OUTPUT FOR CF COMBINATION
         """
+        print(f"\n🔍 PROCESSING DIAGNOSIS: {disease}")
+        print(f"   📋 Rule Evidence: {reasoning}")
+        print(f"   🎯 Base CF from rule: {new_cf}")
+
         # --- Base CF ---
         final_new_cf = new_cf
         disease_info = disease_info_lookup.get(disease, {})
@@ -81,11 +88,15 @@ class DermatologyExpert(KnowledgeEngine):
                 try:
                     user_age = int(age_answer['text'])
                     if age_min <= user_age <= age_max:
-                        final_new_cf = self.combine_cf(
-                            final_new_cf, 0.15)  # Boost for age match
+                        old_cf = final_new_cf
+                        final_new_cf = self.combine_cf(final_new_cf, 0.15)
+                        print(
+                            f"   ✅ Age match bonus: {old_cf} + 0.15 = {final_new_cf:.3f}")
                     else:
-                        final_new_cf = self.combine_cf(
-                            final_new_cf, -0.2)  # Penalty for age mismatch
+                        old_cf = final_new_cf
+                        final_new_cf = self.combine_cf(final_new_cf, -0.2)
+                        print(
+                            f"   ❌ Age mismatch penalty: {old_cf} - 0.2 = {final_new_cf:.3f}")
                 except ValueError:
                     pass
 
@@ -102,11 +113,15 @@ class DermatologyExpert(KnowledgeEngine):
                 "1-2 weeks", "1-3 weeks", "2-4 weeks", "days to weeks"]
 
             if user_duration_text in long_term_user_durations and disease_duration in short_term_disease_durations:
-                # Strong penalty for mismatch
+                old_cf = final_new_cf
                 final_new_cf = self.combine_cf(final_new_cf, -0.4)
+                print(
+                    f"   ⏰ Duration mismatch penalty: {old_cf} - 0.4 = {final_new_cf:.3f}")
             elif disease_duration in DURATION_MAPPING.get(user_duration_text, []):
-                final_new_cf = self.combine_cf(
-                    final_new_cf, 0.1)  # Small boost for match
+                old_cf = final_new_cf
+                final_new_cf = self.combine_cf(final_new_cf, 0.1)
+                print(
+                    f"   ⏰ Duration match bonus: {old_cf} + 0.1 = {final_new_cf:.3f}")
 
         # --- Severity Logic ---
         severity_answer = next((f for f in self.facts.values() if isinstance(
@@ -117,26 +132,44 @@ class DermatologyExpert(KnowledgeEngine):
 
             if disease_severity_levels:
                 if user_severity in disease_severity_levels:
-                    final_new_cf = self.combine_cf(
-                        final_new_cf, 0.15)  # Boost for severity match
+                    old_cf = final_new_cf
+                    final_new_cf = self.combine_cf(final_new_cf, 0.15)
+                    print(
+                        f"   💪 Severity match bonus: {old_cf} + 0.15 = {final_new_cf:.3f}")
                 else:
-                    final_new_cf = self.combine_cf(
-                        final_new_cf, -0.15)  # Penalty for mismatch
+                    old_cf = final_new_cf
+                    final_new_cf = self.combine_cf(final_new_cf, -0.15)
+                    print(
+                        f"   💪 Severity mismatch penalty: {old_cf} - 0.15 = {final_new_cf:.3f}")
 
         # --- Update the diagnosis fact ---
         existing_diagnosis = next((f for f in self.facts.values() if isinstance(
             f, Diagnosis) and f.get("disease") == disease), None)
 
         if existing_diagnosis:
+            print(f"\n🔄 COMBINING WITH EXISTING DIAGNOSIS:")
+            print(f"   📊 Existing CF: {existing_diagnosis['cf']:.3f}")
+            print(f"   📊 New CF: {final_new_cf:.3f}")
+
             combined_cf = self.combine_cf(
                 existing_diagnosis["cf"], final_new_cf)
+
+            print(f"   🎯 COMBINED CF: {combined_cf:.3f}")
+            print(
+                f"   📐 CF Formula: combine_cf({existing_diagnosis['cf']:.3f}, {final_new_cf:.3f}) = {combined_cf:.3f}")
+
             updated_reasoning = f"{existing_diagnosis.get('reasoning', '')}; {reasoning}"
             self.retract(existing_diagnosis)
             self.declare(Diagnosis(disease=disease,
-                         reasoning=updated_reasoning, cf=combined_cf))
+                                   reasoning=updated_reasoning, cf=combined_cf))
+
+            print(f"   📝 Updated reasoning: {updated_reasoning}")
         else:
+            print(f"   ✨ NEW DIAGNOSIS CREATED with CF: {final_new_cf:.3f}")
             self.declare(Diagnosis(disease=disease,
-                         reasoning=reasoning, cf=final_new_cf))
+                                   reasoning=reasoning, cf=final_new_cf))
+
+        print("   " + "─"*50)
 
     @Rule(NOT(NextQuestion(W())), NOT(Fact(id='results_printed')), salience=-1000)
     def display_results(self):
