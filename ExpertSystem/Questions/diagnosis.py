@@ -182,11 +182,45 @@ def apply_diagnostic_rules(cls):
         reasoning="Candidasis main symptom is white patches", new_cf=0.8)
     cls.diagnose_candidiasis = diagnose_candidiasis
 
+    # cf start for contact dermatitis
+
     @Rule(NOT(Stop()), Answer(ident='trigger_contact_related', text='yes'))
-    def diagnose_contact_dermatitis(self): self.declare_or_update_diagnosis(
-        disease='Contact Dermatitis',
-        reasoning="Contact Dermatitis is triggered by plants, metals, and new objects", new_cf=0.9)
-    cls.diagnose_contact_dermatitis = diagnose_contact_dermatitis
+    def diagnose_contact_dermatitis_primary(self):
+        self.declare_or_update_diagnosis(
+            disease='Contact Dermatitis',
+            reasoning="Primary trigger: contact with irritant/allergen",
+            new_cf=0.8
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='locations', text='hands'))
+    def diagnose_contact_dermatitis_hands(self):
+        self.declare_or_update_diagnosis(
+            disease='Contact Dermatitis',
+            reasoning="Common location: hand contact exposure",
+            new_cf=0.4
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_blisters', text='yes'), Answer(ident='duration', text='days to weeks'))
+    def diagnose_contact_dermatitis_acute(self):
+        self.declare_or_update_diagnosis(
+            disease='Contact Dermatitis',
+            reasoning="Acute pattern: blisters with short duration",
+            new_cf=0.35
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='severity', text='moderate'))
+    def diagnose_contact_dermatitis_inflammatory(self):
+        self.declare_or_update_diagnosis(
+            disease='Contact Dermatitis',
+            reasoning="Inflammatory pattern: moderate itchy reaction",
+            new_cf=0.3
+        )
+
+    cls.diagnose_contact_dermatitis_primary = diagnose_contact_dermatitis_primary
+    cls.diagnose_contact_dermatitis_hands = diagnose_contact_dermatitis_hands
+    cls.diagnose_contact_dermatitis_acute = diagnose_contact_dermatitis_acute
+    cls.diagnose_contact_dermatitis_inflammatory = diagnose_contact_dermatitis_inflammatory
+    # cf end for contact dermatitis
 
     # here
     @Rule(NOT(Stop()), Answer(ident='has_symptom_large_tense_blisters', text='yes'))
@@ -195,15 +229,48 @@ def apply_diagnostic_rules(cls):
         reasoning="Large tense blisters are often a symptom of Bullous Pemphigoid", new_cf=0.9)
     cls.diagnose_bullous_pemphigoid = diagnose_bullous_pemphigoid
 
+    # Psoriasis
     @Rule(NOT(Stop()), Answer(ident='has_symptom_thick_patches', text='yes'))
-    def diagnose_psoriasis(self): self.declare_or_update_diagnosis(
-        disease="Psoriasis",
-        reasoning="Thick Pathcesis characteristic of psoriasis.",
-        new_cf=0.85
-    )
-    cls.diagnose_psoriasis = diagnose_psoriasis
+    def diagnose_psoriasis_primary(self):
+        self.declare_or_update_diagnosis(
+            disease="Psoriasis",
+            reasoning="Primary symptom: thick scaly patches",
+            new_cf=0.8
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='locations', text='elbows'))
+    def diagnose_psoriasis_location_elbows(self):
+        self.declare_or_update_diagnosis(
+            disease="Psoriasis",
+            reasoning="Classic location: elbow involvement",
+            new_cf=0.5
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='locations', text='knees'))
+    def diagnose_psoriasis_location_knees(self):
+        self.declare_or_update_diagnosis(
+            disease="Psoriasis",
+            reasoning="Classic location: knee involvement",
+            new_cf=0.5
+        )
+
+    @Rule(NOT(Stop()), Answer(ident='duration', text='chronic'))
+    def diagnose_psoriasis_chronic_pattern(self):
+        self.declare_or_update_diagnosis(
+            disease="Psoriasis",
+            reasoning="Typical pattern: chronic persistent course",
+            new_cf=0.4
+        )
+
+    cls.diagnose_psoriasis_primary = diagnose_psoriasis_primary
+    cls.diagnose_psoriasis_location_elbows = diagnose_psoriasis_location_elbows
+    cls.diagnose_psoriasis_location_knees = diagnose_psoriasis_location_knees
+    cls.diagnose_psoriasis_chronic_pattern = diagnose_psoriasis_chronic_pattern
+
+    # end testing the cf for psoriasis
 
     # here
+
     @Rule(NOT(Stop()), Answer(ident='has_symptom_pimples', text='yes'))
     def diagnose_acne_vulgaris(self): self.declare_or_update_diagnosis(
         disease='Acne Vulgaris',
