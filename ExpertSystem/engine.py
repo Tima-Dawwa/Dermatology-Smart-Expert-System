@@ -1,7 +1,7 @@
 from ExpertSystem.facts import *
-# Correctly import the data and the new lookup function
 from ExpertSystem.Data.disease import diseases, create_disease_lookup, DURATION_MAPPING
 from ExpertSystem.Questions.question import get_question_by_ident
+from AI.llm import MedicalLLM, DiagnosisResult, process_diagnosis_with_llm, display_medical_explanation
 from experta import *
 
 # Create the lookup dictionary once when the module is loaded
@@ -9,8 +9,12 @@ disease_info_lookup = create_disease_lookup()
 
 
 class DermatologyExpert(KnowledgeEngine):
-    def __init__(self):
+    def __init__(self, use_llm=True, llm_instance=None, model_name="microsoft/DialoGPT-medium"):
         super().__init__()
+        self.use_llm = use_llm
+        self.llm = llm_instance if llm_instance else (
+            MedicalLLM(model_name=model_name) if use_llm else None)
+        self.patient_answers = {}  # Store all patient answers for LLM
 
     @DefFacts()
     def _initial_action(self):
@@ -51,6 +55,10 @@ class DermatologyExpert(KnowledgeEngine):
         question_type = question['Type']
 
         response = self.ask_user(question_text, valid_responses, question_type)
+
+        # Store the answer for LLM processing
+        self.patient_answers[ident] = response
+
         self.declare(Answer(ident=ident, text=response))
 
     def combine_cf(self, cf1, cf2):
@@ -171,11 +179,24 @@ class DermatologyExpert(KnowledgeEngine):
 
         print("   " + "─"*50)
 
+    def create_diagnosis_result(self) -> DiagnosisResult:
+        """Create a DiagnosisResult object from the current best diagnosis"""
+        if not self.best_diagnosis:
+            return None
+
+        return DiagnosisResult(
+            disease=self.best_diagnosis.get('disease', 'Unknown'),
+            confidence=self.best_diagnosis.get('cf', 0) * 100,
+            reasoning=self.best_diagnosis.get(
+                'reasoning', 'No reasoning available'),
+            patient_answers=self.patient_answers
+        )
+
     @Rule(NOT(NextQuestion(W())), NOT(Fact(id='results_printed')), salience=-1000)
     def display_results(self):
         """
         Fires when no more questions are left. Finds the best diagnosis
-        and prints the final report.
+        and prints the final report with optional LLM explanation.
         """
         self.declare(Fact(id='results_printed'))
         all_diagnoses = [
@@ -188,6 +209,18 @@ class DermatologyExpert(KnowledgeEngine):
         best_diagnosis = max(all_diagnoses, key=lambda d: d['cf'])
         self.best_diagnosis = best_diagnosis
         self.print_final_diagnoses(best_diagnosis)
+
+        # Generate LLM explanation if enabled and diagnosis found
+        if self.use_llm and self.best_diagnosis and self.llm:
+            try:
+                print("\n🤖 Generating AI-powered medical explanation...")
+                diagnosis_result = self.create_diagnosis_result()
+                medical_explanation = self.llm.get_explanation(
+                    diagnosis_result)
+                display_medical_explanation(medical_explanation)
+            except Exception as e:
+                print(f"\n⚠️ Could not generate AI explanation: {str(e)}")
+                print("The basic diagnosis above is still valid.")
 
     def print_final_diagnoses(self, diag):
         """Prints the final, most likely diagnosis or a 'not found' message."""
@@ -208,3 +241,18 @@ class DermatologyExpert(KnowledgeEngine):
         print(
             "Please consult a healthcare professional for proper diagnosis and treatment.")
         print("="*50)
+
+    def get_llm_explanation_only(self):
+        """
+        Get only the LLM explanation without running the full display.
+        Useful for API/CLI modes.
+        """
+        if not self.use_llm or not self.best_diagnosis or not self.llm:
+            return None
+
+        try:
+            diagnosis_result = self.create_diagnosis_result()
+            return self.llm.get_explanation(diagnosis_result)
+        except Exception as e:
+            print(f"Error generating LLM explanation: {str(e)}")
+            return None
