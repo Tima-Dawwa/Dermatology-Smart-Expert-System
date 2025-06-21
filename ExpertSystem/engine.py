@@ -1,8 +1,9 @@
-from ExpertSystem.facts import *
+from experta import *
+from ExpertSystem.facts import Answer, NextQuestion, Stop, Diagnosis
 from ExpertSystem.Data.disease import diseases, create_disease_lookup, DURATION_MAPPING
 from ExpertSystem.Questions.question import get_question_by_ident
+
 from AI.llm import MedicalLLM, DiagnosisResult, process_diagnosis_with_llm, display_medical_explanation
-from experta import *
 
 # Create the lookup dictionary once when the module is loaded
 disease_info_lookup = create_disease_lookup()
@@ -15,51 +16,26 @@ class DermatologyExpert(KnowledgeEngine):
         self.llm = llm_instance if llm_instance else (
             MedicalLLM(model_name=model_name) if use_llm else None)
         self.patient_answers = {}  # Store all patient answers for LLM
+        self.best_diagnosis = None  # Initialize here for consistency
 
     @DefFacts()
     def _initial_action(self):
         """Initial facts to start the engine."""
         yield Fact(start=True)
-        self.best_diagnosis = None
 
-    def ask_user(self, question_text, valid_responses, question_type):
-        """Handles the user interaction (I/O) for both text and numbers."""
-        print("\n🧐 " + question_text)
-
-        if question_type == 'number':
-            # Loop until a valid number is entered
-            while True:
-                response = input("Your answer (as a number): ").strip()
-                if response.isdigit():
-                    return response
-                else:
-                    print("Invalid input. Please enter a valid number.")
-        else:
-            # Handle multiple choice questions
-            if valid_responses:
-                print(f"Valid responses: {', '.join(valid_responses)}")
-            while True:
-                response = input("Your answer: ").strip().lower()
-                if not valid_responses or response in valid_responses:
-                    return response
-                else:
-                    print(
-                        f"Invalid response. Please enter one of: {', '.join(valid_responses)}")
-
+    # RULE MODIFIED: No longer calls self.ask_user directly
     @Rule(NextQuestion(ident=MATCH.ident), NOT(Answer(ident=MATCH.ident)), salience=200)
-    def ask_question(self, ident):
-        """Generic rule to ask the next question, now handling question types."""
-        question = get_question_by_ident(ident)
-        question_text = question['text']
-        valid_responses = question['valid']
-        question_type = question['Type']
-
-        response = self.ask_user(question_text, valid_responses, question_type)
-
-        # Store the answer for LLM processing
-        self.patient_answers[ident] = response
-
-        self.declare(Answer(ident=ident, text=response))
+    # Renamed for clarity that it's for GUI
+    def ask_question_for_gui(self, ident):
+        """
+        This rule asserts a NextQuestion fact for the GUI to pick up.
+        It then halts the engine to allow GUI to get user input.
+        """
+        # The GUI will now read this fact and display the question.
+        # No direct user interaction (input()) here.
+        # It also implicitly makes sure that a question is declared only if no answer exists for it yet.
+        # Halt the engine, signaling to the GUI that it needs to wait for input.
+        self.halt()
 
     def combine_cf(self, cf1, cf2):
         """Combine confidence factors using standard CF algebra."""
@@ -69,8 +45,6 @@ class DermatologyExpert(KnowledgeEngine):
             return cf1 + cf2 * (1 + cf1)
         else:
             return (cf1 + cf2) / (1 - min(abs(cf1), abs(cf2)))
-
-# REPLACE YOUR declare_or_update_diagnosis METHOD IN engine.py WITH THIS:
 
     def declare_or_update_diagnosis(self, disease, reasoning, new_cf):
         """
@@ -192,55 +166,25 @@ class DermatologyExpert(KnowledgeEngine):
             patient_answers=self.patient_answers
         )
 
-    @Rule(NOT(NextQuestion(W())), NOT(Fact(id='results_printed')), salience=-1000)
-    def display_results(self):
+    # RULE MODIFIED: No longer prints directly, just sets best_diagnosis and halts.
+    @Rule(NOT(NextQuestion(W())), NOT(Fact(id='results_processed')), salience=-1000)
+    def process_final_results(self):  # Renamed for clarity
         """
         Fires when no more questions are left. Finds the best diagnosis
-        and prints the final report with optional LLM explanation.
+        and sets self.best_diagnosis. Halts the engine.
         """
-        self.declare(Fact(id='results_printed'))
+        self.declare(Fact(id='results_processed')
+                     )  # Mark that results have been processed by the engine
         all_diagnoses = [
             f for f in self.facts.values() if isinstance(f, Diagnosis)]
 
-        if not all_diagnoses:
-            self.print_final_diagnoses(None)
-            return
-
-        best_diagnosis = max(all_diagnoses, key=lambda d: d['cf'])
-        self.best_diagnosis = best_diagnosis
-        self.print_final_diagnoses(best_diagnosis)
-
-        # Generate LLM explanation if enabled and diagnosis found
-        if self.use_llm and self.best_diagnosis and self.llm:
-            try:
-                print("\n🤖 Generating AI-powered medical explanation...")
-                diagnosis_result = self.create_diagnosis_result()
-                medical_explanation = self.llm.get_explanation(
-                    diagnosis_result)
-                display_medical_explanation(medical_explanation)
-            except Exception as e:
-                print(f"\n⚠️ Could not generate AI explanation: {str(e)}")
-                print("The basic diagnosis above is still valid.")
-
-    def print_final_diagnoses(self, diag):
-        """Prints the final, most likely diagnosis or a 'not found' message."""
-        print("\n" + "="*50)
-        print("🏥 FINAL DIAGNOSTIC RESULTS")
-        print("="*50)
-
-        if not diag:
-            print("⚠️ No diagnosis could be made based on the provided answers.")
+        if all_diagnoses:
+            self.best_diagnosis = max(all_diagnoses, key=lambda d: d['cf'])
         else:
-            print(f"\nMost Likely Diagnosis: {diag['disease']}")
-            print(f"   Confidence: {diag['cf'] * 100:.1f}%")
-            if diag.get('reasoning'):
-                print(f"   Reasoning: {diag['reasoning']}")
+            self.best_diagnosis = None  # Explicitly set to None if no diagnosis
 
-        print("\n" + "="*50)
-        print("⚠️  DISCLAIMER: This is a preliminary assessment.")
-        print(
-            "Please consult a healthcare professional for proper diagnosis and treatment.")
-        print("="*50)
+        # Halt the engine, signaling to the GUI that the diagnosis process is complete.
+        self.halt()
 
     def get_llm_explanation_only(self):
         """
