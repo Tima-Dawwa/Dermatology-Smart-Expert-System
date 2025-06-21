@@ -1,12 +1,7 @@
-import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
-import threading
-from PIL import Image, ImageTk
-import os
-from datetime import datetime
-import json
-from ExpertSystem.Questions.question_flow import *
 from ExpertSystem.engine import *
+from ExpertSystem.Questions.question_flow import *
+from tkinter import ttk, messagebox, scrolledtext
+import tkinter as tk
 
 
 class ModernDermatologyGUI:
@@ -15,17 +10,10 @@ class ModernDermatologyGUI:
         self.setup_main_window()
         self.setup_styles()
         self.create_main_interface()
-
-        # Initialize the expert system
         self.expert_system = None
         self.current_question = None
-        self.question_queue = []
         self.diagnosis_complete = False
-        self.session_data = {
-            'started_at': None,
-            'answers': {},
-            'diagnosis': None
-        }
+        self.waiting_for_answer = False  # Flag to manage GUI state
 
     def setup_main_window(self):
         """Configure the main window with modern styling"""
@@ -168,11 +156,6 @@ class ModernDermatologyGUI:
         self.notebook.add(self.diagnosis_frame, text='🔍 Diagnosis')
         self.create_diagnosis_tab()
 
-        # History Tab
-        self.history_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.history_frame, text='📋 Session History')
-        self.create_history_tab()
-
         # Settings Tab
         self.settings_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.settings_frame, text='⚙️ Settings')
@@ -189,8 +172,8 @@ class ModernDermatologyGUI:
         self.welcome_frame.grid(
             row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
 
-        welcome_text = """Welcome to the Dermatology Expert System. This professional tool will guide you through 
-a series of questions to help identify potential skin conditions. Please answer all questions accurately 
+        welcome_text = """Welcome to the Dermatology Expert System. This professional tool will guide you through
+a series of questions to help identify potential skin conditions. Please answer all questions accurately
 for the best diagnostic results."""
 
         welcome_label = tk.Label(self.welcome_frame, text=welcome_text,
@@ -251,52 +234,6 @@ for the best diagnostic results."""
         # Initially hide question and results areas
         self.question_frame.grid_remove()
         self.results_frame.grid_remove()
-
-    def create_history_tab(self):
-        """Create the session history tab"""
-        self.history_frame.grid_rowconfigure(0, weight=1)
-        self.history_frame.grid_columnconfigure(0, weight=1)
-
-        # History listbox with scrollbar
-        history_container = ttk.Frame(self.history_frame)
-        history_container.grid(
-            row=0, column=0, sticky='nsew', padx=10, pady=10)
-        history_container.grid_rowconfigure(0, weight=1)
-        history_container.grid_columnconfigure(0, weight=1)
-
-        self.history_tree = ttk.Treeview(history_container, columns=('Date', 'Diagnosis', 'Confidence'),
-                                         show='headings', height=15)
-
-        self.history_tree.heading('Date', text='Date & Time')
-        self.history_tree.heading('Diagnosis', text='Diagnosis')
-        self.history_tree.heading('Confidence', text='Confidence')
-
-        self.history_tree.column('Date', width=200)
-        self.history_tree.column('Diagnosis', width=300)
-        self.history_tree.column('Confidence', width=100)
-
-        self.history_tree.grid(row=0, column=0, sticky='nsew')
-
-        # Scrollbars
-        h_scroll = ttk.Scrollbar(
-            history_container, orient='horizontal', command=self.history_tree.xview)
-        h_scroll.grid(row=1, column=0, sticky='ew')
-        self.history_tree.configure(xscrollcommand=h_scroll.set)
-
-        v_scroll = ttk.Scrollbar(
-            history_container, orient='vertical', command=self.history_tree.yview)
-        v_scroll.grid(row=0, column=1, sticky='ns')
-        self.history_tree.configure(yscrollcommand=v_scroll.set)
-
-        # Buttons frame
-        history_buttons = ttk.Frame(self.history_frame)
-        history_buttons.grid(row=1, column=0, sticky='ew',
-                             padx=10, pady=(5, 10))
-
-        ttk.Button(history_buttons, text="Clear History",
-                   command=self.clear_history).pack(side='right')
-        ttk.Button(history_buttons, text="Export History",
-                   command=self.export_history).pack(side='right', padx=(0, 10))
 
     def create_settings_tab(self):
         """Create the settings tab"""
@@ -362,7 +299,7 @@ for the best diagnostic results."""
         version_label.grid(row=0, column=1, sticky='e')
 
     def start_diagnosis(self):
-        """Initialize and start the diagnosis process"""
+        """Initialize and start the diagnosis process."""
         try:
             self.update_status("Initializing diagnosis...", 'warning')
 
@@ -376,23 +313,14 @@ for the best diagnostic results."""
                 model_name=self.model_var.get()
             )
 
-            # Reset session data
-            self.session_data = {
-                'started_at': datetime.now(),
-                'answers': {},
-                'diagnosis': None
-            }
-
+            self.expert_system.reset()
             self.diagnosis_complete = False
-            self.question_queue = []
+            self.waiting_for_answer = False  # Ensure this is False at start
 
             # Hide welcome and show question area
             self.welcome_frame.grid_remove()
             self.question_frame.grid()
             self.results_frame.grid_remove()
-
-            # Override the expert system's ask_user method
-            self.expert_system.ask_user = self.gui_ask_user
 
             # Start the diagnosis process
             self.update_status("Diagnosis in progress...", 'secondary')
@@ -401,8 +329,8 @@ for the best diagnostic results."""
             # Initialize the expert system with start fact
             self.expert_system.declare(Fact(start=True))
 
-            # Start processing questions
-            self.process_next_question()
+            # Begin the expert system processing loop
+            self.root.after(100, self.process_expert_system)
 
         except Exception as e:
             messagebox.showerror(
@@ -410,48 +338,71 @@ for the best diagnostic results."""
             self.update_status("Error occurred", 'accent')
             self.start_button.config(state='normal')
 
-    def gui_ask_user(self, question_text, valid_responses, question_type):
-        """GUI version of ask_user method - stores question for GUI processing"""
-        # Store the question for GUI processing
-        self.current_question = {
-            'text': question_text,
-            'valid_responses': valid_responses,
-            'type': question_type,
-            'answer': None,
-            'answered': False
-        }
-
-        # Display the question in GUI
-        self.display_question()
-
-        # Return a placeholder - the actual answer will be processed later
-        return None
-
-    def process_next_question(self):
-        """Process the next question in the expert system"""
+    def process_expert_system(self):
+        """
+        Manages the expert system's execution cycle.
+        This method is called periodically or after user input.
+        """
         try:
-            # Run the expert system to get the next question
+            if self.waiting_for_answer:
+                # If we are waiting for user input, do nothing until an answer is submitted.
+                return
+
+            # Run the expert system. It will halt itself if a NextQuestion is declared
+            # or when the final results are processed.
             self.expert_system.run()
 
-            # Check if we have a current question to display
-            if self.current_question and not self.current_question['answered']:
-                # Question is already displayed, waiting for user input
-                return
+            # After running, check the state of the expert system
+            next_question_fact = None
+            for fact_id in self.expert_system.facts:
+                fact = self.expert_system.facts[fact_id]
+                if isinstance(fact, NextQuestion):
+                    # Found a NextQuestion fact, check if it's already answered
+                    is_answered = any(isinstance(f, Answer) and f['ident'] == fact['ident']
+                                      for f_id, f in self.expert_system.facts.items())
+                    if not is_answered:
+                        next_question_fact = fact
+                        break
 
-            # Check if diagnosis is complete
-            if hasattr(self.expert_system, 'best_diagnosis') and self.expert_system.best_diagnosis:
-                self.show_results()
-                return
+            if next_question_fact:
+                # If a new question needs to be asked
+                self.handle_question(next_question_fact['ident'])
+                self.waiting_for_answer = True  # Set flag, GUI is now waiting for user input
+            elif not self.diagnosis_complete:
+                # If no more questions are being asked, and diagnosis isn't complete yet,
+                # it means the engine has reached its conclusion.
+                self.diagnosis_complete = True  # Mark as complete to avoid re-entering this branch
+                if hasattr(self.expert_system, 'best_diagnosis') and self.expert_system.best_diagnosis:
+                    self.show_diagnosis_results()
+                else:
+                    self.show_no_diagnosis_message()
 
-            # If no question and no diagnosis, something went wrong
-            if not self.current_question:
-                self.show_results()  # Show results even if empty
+            # If diagnosis_complete is True, no further action is needed until reset.
 
         except Exception as e:
             self.handle_diagnosis_error(str(e))
 
+    def handle_question(self, question_ident):
+        """Handle a question by displaying it in the GUI."""
+        try:
+            question_data = get_question_by_ident(question_ident)
+            if not question_data:
+                raise ValueError(
+                    f"Question with ident '{question_ident}' not found.")
+
+            self.current_question = {
+                'ident': question_ident,
+                'text': question_data['text'],
+                'valid_responses': question_data['valid'],
+                'type': question_data['Type']
+            }
+            self.display_question()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Error handling question: {str(e)}")
+
     def display_question(self):
-        """Display the current question in the GUI"""
+        """Display the current question in the GUI."""
         if not self.current_question:
             return
 
@@ -459,24 +410,25 @@ for the best diagnostic results."""
         valid_responses = self.current_question['valid_responses']
         question_type = self.current_question['type']
 
-        # Update question text
         self.question_text.config(state='normal')
         self.question_text.delete(1.0, tk.END)
         self.question_text.insert(1.0, f"🤔 {question_text}")
         self.question_text.config(state='disabled')
 
-        # Clear previous answer widgets
         for widget in self.answer_frame.winfo_children():
             widget.destroy()
 
-        # Create appropriate input widgets
         if question_type == 'number':
             self.create_number_input()
+        elif "Select all that apply" in question_text:
+            self.create_multiple_choice_input(
+                valid_responses, allow_multiple=True)
         else:
-            self.create_multiple_choice_input(valid_responses)
+            self.create_multiple_choice_input(
+                valid_responses, allow_multiple=False)
 
     def create_number_input(self):
-        """Create number input widget"""
+        """Create number input widget."""
         input_frame = ttk.Frame(self.answer_frame)
         input_frame.pack(fill='x', pady=10)
 
@@ -492,318 +444,396 @@ for the best diagnostic results."""
                                    style='Primary.TButton', command=self.submit_number_answer)
         submit_button.pack(anchor='w')
 
-        # Bind Enter key
         self.number_entry.bind(
             '<Return>', lambda e: self.submit_number_answer())
 
-    def create_multiple_choice_input(self, valid_responses):
-        """Create multiple choice input widgets"""
+    def create_multiple_choice_input(self, valid_responses, allow_multiple=False):
+        """Create multiple choice input widgets."""
         input_frame = ttk.Frame(self.answer_frame)
         input_frame.pack(fill='both', expand=True, pady=10)
 
-        ttk.Label(input_frame, text="Select your answer:",
-                  font=('Segoe UI', 11)).pack(anchor='w')
+        if allow_multiple:
+            ttk.Label(input_frame, text="Select all that apply:",
+                      font=('Segoe UI', 11)).pack(anchor='w')
+        else:
+            ttk.Label(input_frame, text="Select your answer:",
+                      font=('Segoe UI', 11)).pack(anchor='w')
 
-        self.choice_var = tk.StringVar()
-
-        # Create radio buttons for each option
         button_frame = ttk.Frame(input_frame)
         button_frame.pack(fill='both', expand=True, pady=(10, 0))
 
-        for i, option in enumerate(valid_responses):
-            # Make option text more readable
-            display_text = option.replace('_', ' ').title()
-
-            radio_button = ttk.Radiobutton(button_frame, text=display_text,
-                                           variable=self.choice_var, value=option)
-            radio_button.pack(anchor='w', pady=2)
-
-            if i == 0:  # Select first option by default
-                radio_button.invoke()
+        if allow_multiple:
+            # Use checkboxes for multiple selection
+            self.checkbox_vars = {}
+            for option in valid_responses:
+                display_text = option.replace('_', ' ').title()
+                var = tk.BooleanVar()
+                self.checkbox_vars[option] = var
+                checkbox = ttk.Checkbutton(
+                    button_frame, text=display_text, variable=var)
+                checkbox.pack(anchor='w', pady=2)
+        else:
+            # Use radio buttons for single selection
+            self.choice_var = tk.StringVar()
+            for i, option in enumerate(valid_responses):
+                display_text = option.replace('_', ' ').title()
+                radio_button = ttk.Radiobutton(button_frame, text=display_text,
+                                               variable=self.choice_var, value=option)
+                radio_button.pack(anchor='w', pady=2)
+                if i == 0:
+                    radio_button.invoke()
 
         submit_button = ttk.Button(input_frame, text="Submit Answer",
                                    style='Primary.TButton', command=self.submit_choice_answer)
         submit_button.pack(anchor='w', pady=(15, 0))
 
     def submit_number_answer(self):
-        """Submit number answer"""
+        """Submit number answer."""
         try:
             answer = self.number_entry.get().strip()
             if not answer.isdigit():
                 messagebox.showerror(
                     "Invalid Input", "Please enter a valid number.")
                 return
-
             self.process_answer(answer)
-
         except Exception as e:
             messagebox.showerror("Error", f"Error submitting answer: {str(e)}")
 
     def submit_choice_answer(self):
-        """Submit multiple choice answer"""
+        """Submit multiple choice answer."""
         try:
-            answer = self.choice_var.get()
-            if not answer:
-                messagebox.showerror(
-                    "No Selection", "Please select an answer.")
-                return
+            if hasattr(self, 'checkbox_vars'):
+                # Multiple selection - get all checked options
+                selected_options = [option for option,
+                                    var in self.checkbox_vars.items() if var.get()]
+                if not selected_options:
+                    messagebox.showerror(
+                        "No Selection", "Please select at least one answer.")
+                    return
+                # Join multiple selections with commas
+                answer = ",".join(selected_options)
+            else:
+                # Single selection
+                answer = self.choice_var.get()
+                if not answer:
+                    messagebox.showerror(
+                        "No Selection", "Please select an answer.")
+                    return
 
             self.process_answer(answer)
-
         except Exception as e:
             messagebox.showerror("Error", f"Error submitting answer: {str(e)}")
 
     def process_answer(self, answer):
-        """Process the submitted answer"""
+        """Process the submitted answer."""
         try:
-            # Store the answer
-            self.current_question['answer'] = answer
-            self.current_question['answered'] = True
+            if not self.current_question:
+                return
 
-            # Add to session data
-            self.session_data['answers'][len(self.session_data['answers'])] = {
-                'question': self.current_question['text'],
-                'answer': answer
-            }
-
-            # Determine question identifier from the question text
-            question_ident = self.get_question_identifier(
-                self.current_question['text'])
+            question_ident = self.current_question['ident']
 
             # Declare the answer as a fact in the expert system
-            if question_ident:
-                self.expert_system.declare(
-                    Answer(ident=question_ident, text=answer))
+            self.expert_system.declare(
+                Answer(ident=question_ident, text=answer))
 
-            # Clear the current question
+            # Clear the current question state
             self.current_question = None
+            self.waiting_for_answer = False  # Reset the flag
 
-            # Process next question
-            self.root.after(100, self.process_next_question)
+            # Schedule the next processing cycle for the expert system
+            self.root.after(100, self.process_expert_system)
 
         except Exception as e:
             messagebox.showerror("Error", f"Error processing answer: {str(e)}")
 
-    def get_question_identifier(self, question_text):
-        """Map question text to identifier"""
-        # This is a simplified mapping - you might need to adjust based on your question structure
-        question_mapping = {
-            'age': 'age',
-            'How long': 'duration',
-            'severity': 'severity',
-            'lump': 'has_symptom_lump_or_growth',
-            'nails or hair': 'affects_nails_or_hair',
-            'rash': 'has_symptom_rash',
-            'location': 'locations',
-            'purpura': 'has_symptom_palpable_purpura',
-            'soft lump': 'has_symptom_soft_lump',
-            'firm lump': 'has_symptom_firm_lump',
-            'rough bumps': 'has_symptom_rough_bumps',
-            'waxy': 'has_symptom_waxy_appearance',
-            'mole': 'has_symptom_evolution_of_mole',
-            'sore': 'has_symptom_sore_that_wont_heal',
-            'scaly patch': 'has_symptom_persistent_scaly_patch',
-            'hair loss': 'has_symptom_patchy_hair_loss',
-            'nail pitting': 'has_symptom_nail_pitting',
-            'nail thickening': 'has_symptom_nail_thickening',
-            'nail concavity': 'has_symptom_nail_concavity',
-            'nail fold': 'has_symptom_nail_fold_swelling',
-            'nail grooves': 'has_symptom_transverse_nail_grooves',
-            'itching': 'has_symptom_itching',
-            'worse at night': 'has_symptom_worse_at_night',
-            'dryness': 'has_symptom_dryness',
-            'ring shaped': 'has_symptom_ring_shaped_rash',
-            'white patches': 'has_symptom_white_patches',
-            'blisters': 'has_symptom_blisters',
-            'contact': 'trigger_contact_related',
-            'tense blisters': 'has_symptom_large_tense_blisters',
-            'thick patches': 'has_symptom_thick_patches',
-            'pimples': 'has_symptom_pimples',
-            'unilateral': 'has_symptom_unilateral_rash',
-            'pain': 'has_symptom_pain',
-            'bulls eye': 'has_symptom_bulls_eye_rash',
-            'butterfly': 'has_symptom_butterfly_rash',
-            'painful blisters': 'has_symptom_painful_blisters',
-            'honey colored': 'has_symptom_honey_colored_crusts',
-            'spreading redness': 'has_symptom_spreading_redness',
-            'warmth': 'has_symptom_warmth',
-            'symmetrical': 'has_symptom_symmetrical_red_rash',
-            'medications': 'trigger_medications',
-            'loss of pigment': 'has_symptom_loss_of_pigment',
-            'brown or gray': 'has_symptom_brown_or_gray_patches',
-            'discolored patches': 'has_symptom_discolored_patches',
-            'central dimple': 'has_symptom_central_dimple',
-            'rough scaly': 'has_symptom_rough_scaly_patch',
-            'persistent redness': 'has_symptom_persistent_redness'
-        }
+    def handle_diagnosis_error(self, error_message):
+        """Handle errors during diagnosis process."""
+        self.progress_bar.stop()
+        self.update_status("Error occurred", 'accent')
+        messagebox.showerror(
+            "Diagnosis Error", f"An error occurred during diagnosis: {error_message}")
+        self.reset_diagnosis()
 
-        # Find matching identifier
-        for key, ident in question_mapping.items():
-            if key.lower() in question_text.lower():
-                return ident
-
-        # Default fallback
-        return None
-
-    
-
-    def show_results(self):
-        """Display the diagnosis results"""
+    def show_diagnosis_results(self):
+        """Display the diagnosis results."""
         self.progress_bar.stop()
         self.update_status("Diagnosis complete", 'success')
 
-        # Show results frame
+        self.question_frame.grid_remove()
         self.results_frame.grid()
 
-        # Get diagnosis results
-        if hasattr(self.expert_system, 'best_diagnosis') and self.expert_system.best_diagnosis:
-            diagnosis = self.expert_system.best_diagnosis
-            confidence = diagnosis.get('cf', 0) * 100
-            disease = diagnosis.get('disease', 'Unknown')
-            reasoning = diagnosis.get('reasoning', 'No reasoning available')
+        best_diagnosis = self.expert_system.best_diagnosis
 
-            # Format results
-            results_text = f"""
-🏥 DIAGNOSIS RESULTS
-{'='*50}
+        self.results_text.config(state='normal')
+        self.results_text.delete(1.0, tk.END)
 
-📋 Primary Diagnosis: {disease}
-📊 Confidence Level: {confidence:.1f}%
-🔍 Clinical Reasoning: {reasoning}
+        if best_diagnosis:
+            disease = best_diagnosis.get('disease', 'Unknown condition')
+            confidence = best_diagnosis.get('cf', 0.0) * 100
+            reasoning = best_diagnosis.get(
+                'reasoning', 'No reasoning available')
 
-{'='*50}
-⚠️ IMPORTANT DISCLAIMER:
-This is a preliminary assessment based on the information provided. 
-Please consult with a qualified healthcare professional for proper 
-diagnosis, treatment recommendations, and medical advice.
-{'='*50}
-            """
+            self.results_text.insert(tk.END, "🏥 DIAGNOSIS RESULTS\n")
+            self.results_text.insert(tk.END, "=" * 50 + "\n\n")
+            self.results_text.insert(
+                tk.END, f"📋 Primary Diagnosis: {disease}\n")
+            if self.show_confidence.get():
+                self.results_text.insert(
+                    tk.END, f"   Confidence: {confidence:.1f}%\n")
+            if self.detailed_reasoning.get():
+                self.results_text.insert(
+                    tk.END, f"   Reasoning: {reasoning}\n")
+            self.results_text.insert(tk.END, "\n")
+
+            # Add recommendations section
+            self.results_text.insert(tk.END, "\n" + "=" * 50 + "\n")
+            self.results_text.insert(tk.END, "📋 RECOMMENDATIONS\n")
+            self.results_text.insert(tk.END, "=" * 50 + "\n\n")
+
+            recommendations = self.get_recommendations([best_diagnosis])
+            for rec in recommendations:
+                self.results_text.insert(tk.END, f"• {rec}\n")
 
             # Get AI explanation if available
             if self.ai_enabled.get():
                 try:
                     ai_explanation = self.expert_system.get_llm_explanation_only()
                     if ai_explanation:
-                        results_text += f"\n\n🤖 AI-POWERED MEDICAL EXPLANATION:\n{ai_explanation}\n"
+                        self.results_text.insert(
+                            tk.END, f"\n\n🤖 AI-POWERED MEDICAL EXPLANATION:\n{ai_explanation}\n")
                 except Exception as e:
-                    results_text += f"\n\n⚠️ AI explanation unavailable: {str(e)}\n"
+                    self.results_text.insert(
+                        tk.END, f"\n\n⚠️ AI explanation unavailable: {str(e)}\n")
 
-            # Store in session data
-            self.session_data['diagnosis'] = {
-                'disease': disease,
-                'confidence': confidence,
-                'reasoning': reasoning
-            }
-
-        else:
-            results_text = """
-🏥 DIAGNOSIS RESULTS
-{'='*50}
-
-⚠️ No definitive diagnosis could be made based on the provided information.
-
-This could be due to:
-• Insufficient symptom information
-• Symptoms not matching known conditions in the database
-• Need for additional clinical examination
-
-{'='*50}
-⚠️ RECOMMENDATION:
-Please consult with a dermatologist or healthcare professional 
-for proper evaluation and diagnosis.
-{'='*50}
-            """
-
-        # Display results
-        self.results_text.config(state='normal')
-        self.results_text.delete(1.0, tk.END)
-        self.results_text.insert(1.0, results_text)
         self.results_text.config(state='disabled')
-
-        # Add to history
-        self.add_to_history()
-
-        # Switch to results view
+        self.create_results_buttons()
         self.notebook.select(0)  # Stay on diagnosis tab
 
-    def handle_diagnosis_error(self, error_message):
-        """Handle errors during diagnosis"""
+    def show_no_diagnosis_message(self):
+        """Show message when no diagnosis is available."""
         self.progress_bar.stop()
-        self.update_status("Error occurred", 'accent')
-        messagebox.showerror(
-            "Diagnosis Error", f"An error occurred during diagnosis:\n{error_message}")
+        self.update_status("No diagnosis available", 'warning')
 
-    def add_to_history(self):
-        """Add current session to history"""
-        if self.session_data['diagnosis']:
-            self.history_tree.insert('', 0, values=(
-                self.session_data['started_at'].strftime("%Y-%m-%d %H:%M:%S"),
-                self.session_data['diagnosis']['disease'],
-                f"{self.session_data['diagnosis']['confidence']:.1f}%"
-            ))
+        self.question_frame.grid_remove()
+        self.results_frame.grid()
 
-    def clear_history(self):
-        """Clear diagnosis history"""
-        if messagebox.askyesno("Clear History", "Are you sure you want to clear all diagnosis history?"):
-            for item in self.history_tree.get_children():
-                self.history_tree.delete(item)
+        self.results_text.config(state='normal')
+        self.results_text.delete(1.0, tk.END)
+        self.results_text.insert(tk.END, "⚠️ INSUFFICIENT INFORMATION\n")
+        self.results_text.insert(tk.END, "=" * 50 + "\n\n")
+        self.results_text.insert(
+            tk.END, "Unable to make a diagnosis based on the provided information.\n\n")
+        self.results_text.insert(tk.END, "Possible reasons:\n")
+        self.results_text.insert(
+            tk.END, "• Symptoms don't match known patterns\n")
+        self.results_text.insert(
+            tk.END, "• Additional information may be required\n")
+        self.results_text.insert(
+            tk.END, "• Condition may require professional examination\n\n")
+        self.results_text.insert(
+            tk.END, "Please consult with a dermatologist or healthcare provider for proper evaluation.")
+        self.results_text.config(state='disabled')
+        self.create_results_buttons()
+        self.notebook.select(0)  # Stay on diagnosis tab
 
-    def export_history(self):
-        """Export diagnosis history to file"""
+    def get_recommendations(self, diagnosis_results):
+        """Generate recommendations based on diagnosis."""
+        recommendations = []
+        recommendations.append(
+            "Consult with a dermatologist for professional confirmation and treatment plan")
+        recommendations.append("Avoid scratching or picking at affected areas")
+        recommendations.append("Keep the affected area clean and dry")
+
+        for diag_info in diagnosis_results:
+            condition = diag_info.get('disease', '').lower()
+
+            if 'eczema' in condition or 'dermatitis' in condition:
+                recommendations.extend([
+                    "Use gentle, fragrance-free moisturizers regularly",
+                    "Avoid known triggers (allergens, irritants)",
+                    "Consider cool compresses for relief"
+                ])
+            elif 'psoriasis' in condition:
+                recommendations.extend([
+                    "Consider topical treatments as prescribed",
+                    "Manage stress levels",
+                    "Protect skin from injury"
+                ])
+            elif 'fungal' in condition or 'ringworm' in condition:
+                recommendations.extend([
+                    "Keep affected area dry",
+                    "Avoid sharing personal items",
+                    "Consider antifungal treatments"
+                ])
+            elif 'acne' in condition:
+                recommendations.extend([
+                    "Use gentle, non-comedogenic skincare products",
+                    "Avoid excessive washing or harsh scrubbing",
+                    "Consider topical treatments"
+                ])
+            elif 'cancer' in condition or 'melanoma' in condition or 'carcinoma' in condition:
+                recommendations.extend([
+                    "⚠️ URGENT: Seek immediate medical attention",
+                    "Schedule appointment with dermatologist as soon as possible",
+                    "Protect from sun exposure"
+                ])
+        return list(set(recommendations))
+
+    def create_results_buttons(self):
+        """Create action buttons for results screen."""
+        button_frame = ttk.Frame(self.results_frame)
+        button_frame.grid(row=1, column=0, sticky='ew', pady=(15, 0))
+
+        ttk.Button(button_frame, text="🔄 Start New Diagnosis",
+                   style='Primary.TButton', command=self.reset_diagnosis).pack(side='left', padx=(0, 10))
+        ttk.Button(button_frame, text="💾 Save Results",
+                   style='Success.TButton', command=self.save_results).pack(side='left', padx=(0, 10))
+        ttk.Button(button_frame, text="🖨️ Print Results",
+                   command=self.print_results).pack(side='left')
+
+    def reset_diagnosis(self):
+        """Reset the diagnosis interface for a new session."""
+        self.expert_system = None
+        self.current_question = None
+        self.diagnosis_complete = False
+        self.waiting_for_answer = False
+
+        self.progress_bar.stop()
+        self.update_status("Ready", 'success')
+
+        self.welcome_frame.grid()
+        self.question_frame.grid_remove()
+        self.results_frame.grid_remove()
+
+        self.start_button.config(state='normal')
+
+        self.results_text.config(state='normal')
+        self.results_text.delete(1.0, tk.END)
+        self.results_text.config(state='disabled')
+
+    def save_results(self):
+        """Save diagnosis results to file."""
         try:
             from tkinter import filedialog
+            import datetime
+
             filename = filedialog.asksaveasfilename(
-                defaultextension=".json",
-                filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+                title="Save Diagnosis Results"
             )
+
             if filename:
-                history_data = []
-                for item in self.history_tree.get_children():
-                    values = self.history_tree.item(item)['values']
-                    history_data.append({
-                        'date': values[0],
-                        'diagnosis': values[1],
-                        'confidence': values[2]
-                    })
-
-                with open(filename, 'w') as f:
-                    json.dump(history_data, f, indent=2)
-
-                messagebox.showinfo("Export Complete",
-                                    f"History exported to {filename}")
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write("DERMATOLOGY EXPERT SYSTEM - DIAGNOSIS REPORT\n")
+                    f.write("=" * 50 + "\n")
+                    f.write(
+                        f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                    results_content = self.results_text.get(1.0, tk.END)
+                    f.write(results_content)
+                    f.write("\n\n" + "=" * 50 + "\n")
+                    f.write(
+                        "DISCLAIMER: This report is generated by an AI-based expert system\n")
+                    f.write(
+                        "and should not replace professional medical consultation.\n")
+                    f.write(
+                        "Always consult qualified healthcare professionals for proper\n")
+                    f.write("diagnosis and treatment.\n")
+                messagebox.showinfo("Success", f"Results saved to {filename}")
         except Exception as e:
-            messagebox.showerror(
-                "Export Error", f"Failed to export history: {str(e)}")
+            messagebox.showerror("Error", f"Error saving results: {str(e)}")
+
+    def print_results(self):
+        """Print diagnosis results."""
+        try:
+            import tempfile
+            import os
+            import subprocess
+
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+                html_content = self.generate_html_report()
+                f.write(html_content)
+                temp_filename = f.name
+
+            if os.name == 'nt':
+                os.startfile(temp_filename)
+            elif os.name == 'posix':
+                subprocess.run(['open', temp_filename] if os.uname().sysname == 'Darwin'
+                               else ['xdg-open', temp_filename])
+        except Exception as e:
+            messagebox.showerror("Error", f"Error printing results: {str(e)}")
+
+    def generate_html_report(self):
+        """Generate HTML report for printing."""
+        import datetime
+        results_content = self.results_text.get(1.0, tk.END)
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Dermatology Diagnosis Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }}
+                .header {{ text-align: center; border-bottom: 2px solid #2C3E50; padding-bottom: 20px; margin-bottom: 30px; }}
+                .content {{ white-space: pre-wrap; }}
+                .disclaimer {{ background-color: #f8f9fa; padding: 15px; border-left: 4px solid #F39C12; margin-top: 30px; }}
+                @media print {{ body {{ margin: 20px; }} }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Dermatology Expert System</h1>
+                <h2>Diagnosis Report</h2>
+                <p>Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </div>
+            <div class="content">
+{results_content}
+            </div>
+            <div class="disclaimer">
+                <strong>DISCLAIMER:</strong> This report is generated by an AI-based expert system
+                and should not replace professional medical consultation. Always consult qualified
+                healthcare professionals for proper diagnosis and treatment.
+            </div>
+        </body>
+        </html>
+        """
+        return html
 
     def save_settings(self):
-        """Save application settings"""
-        messagebox.showinfo("Settings", "Settings saved successfully!")
+        """Save application settings."""
+        try:
+            messagebox.showinfo("Settings", "Settings saved successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error saving settings: {str(e)}")
 
-    def update_status(self, message, status_type='primary'):
-        """Update status indicator"""
-        color_map = {
-            'primary': self.colors['text_primary'],
-            'secondary': self.colors['secondary'],
-            'success': self.colors['success'],
-            'warning': self.colors['warning'],
-            'accent': self.colors['accent']
-        }
-
-        self.status_label.config(text=message, foreground=color_map.get(
-            status_type, self.colors['text_primary']))
+    def update_status(self, message, status_type='secondary'):
+        """Update the status display."""
+        try:
+            self.status_label.config(
+                text=message, foreground=self.colors[status_type])
+            self.root.update_idletasks()
+        except Exception as e:
+            print(f"Error updating status: {str(e)}")
 
     def run(self):
-        """Start the GUI application"""
-        self.root.mainloop()
+        """Start the GUI application."""
+        try:
+            self.root.mainloop()
+        except KeyboardInterrupt:
+            print("\nApplication terminated by user")
+        except Exception as e:
+            print(f"Application error: {str(e)}")
+            messagebox.showerror(
+                "Fatal Error", f"Application encountered a fatal error: {str(e)}")
 
 
 def main():
-    """Main function to run the application"""
+    """Main function to run the application."""
     try:
         app = ModernDermatologyGUI()
         app.run()
     except Exception as e:
-        print(f"Failed to start application: {e}")
+        print(f"Failed to start application: {str(e)}")
         import traceback
         traceback.print_exc()
 
