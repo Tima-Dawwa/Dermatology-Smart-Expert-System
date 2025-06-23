@@ -56,11 +56,13 @@ def apply_question_flow(cls):
     # --- Branch A: Growths ---
 
     @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), NOT(Answer(ident='has_symptom_soft_lump')), salience=90)
-    def ask_a1(self): self.declare(NextQuestion(ident='has_symptom_soft_lump'))
+    def ask_a1(self):
+        self.declare(NextQuestion(ident='has_symptom_soft_lump'))
     cls.ask_a1 = ask_a1
 
     @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='no'), NOT(Answer(ident='has_symptom_firm_lump')), salience=89)
-    def ask_a2(self): self.declare(NextQuestion(ident='has_symptom_firm_lump'))
+    def ask_a2(self):
+        self.declare(NextQuestion(ident='has_symptom_firm_lump'))
     cls.ask_a2 = ask_a2
 
     @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='no'), Answer(ident='has_symptom_firm_lump', text='no'), NOT(Answer(ident='has_symptom_rough_bumps')), salience=88)
