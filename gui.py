@@ -1,15 +1,16 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, messagebox, scrolledtext, filedialog
 import datetime
 import os
 import subprocess
 import tempfile
 import queue
 from threading import Thread
+import datetime
 
 # Re-import all necessary Experta and ExpertSystem components
-from experta import Fact, KnowledgeEngine
-from ExpertSystem.facts import Answer, NextQuestion, Diagnosis
+from experta import Fact
+from ExpertSystem.facts import Answer, NextQuestion
 from ExpertSystem.Questions.question import get_question_by_ident
 
 
@@ -832,7 +833,7 @@ class ModernFreshDermatologyGUI:
 
     def save_results(self):
         try:
-            filename = messagebox.asksaveasfilename(
+            filename = filedialog.asksaveasfilename(
                 defaultextension=".txt",
                 filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
                 title="Save Diagnosis Results"
@@ -854,13 +855,15 @@ class ModernFreshDermatologyGUI:
                     f.write(
                         "Always consult qualified healthcare professionals for proper\n")
                     f.write("diagnosis and treatment.\n")
+
                 messagebox.showinfo("Success", f"Results saved to {filename}")
+
         except Exception as e:
             messagebox.showerror("Error", f"Error saving results: {str(e)}")
 
     def print_results(self):
         try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
                 html_content = self.generate_html_report()
                 f.write(html_content)
                 temp_filename = f.name
