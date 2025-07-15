@@ -75,23 +75,25 @@ class Diagnosis(Fact):
     disease = Field(str, mandatory=True)        # e.g., 'Eczema'
     reasoning = Field(str, default=None)        # Explanation
     cf = Field(float, default=1.0)              # Overall confidence
+    age_boosted = Field(bool, default=False)  # Default is False
+    duration_boosted = Field(bool, default=False)  # Default is False
+    severity_adjusted = Field(bool, default=False)  # Default is False
+    merge_count = Field(int, default=0)                # how many merges this diagnosis has undergone
+
 
 # -- Disease Metadata (Knowledge base fact) --
 
 
 class DiseaseInfo(Fact):
-    """
-    Metadata about a disease — optional layer for knowledge rules.
-    """
     name = Field(str, mandatory=True)
     common_symptoms = Field(dict, mandatory=True)
-    common_age_range = Field(str, default=None)         # e.g., '20-40'
+    age_min = Field(int, default=0)
+    age_max = Field(int, default=120)
     common_locations = Field(list, default=[])
     severity_levels = Field(list, default=[])
-    common_duration = Field(str, default=None)          # e.g., '2 weeks'
-    triggers = Field(list, default=[])                  # e.g., ['stress']
-    # common_treatments = Field(list, default=[])
-    notes = Field(str, default=None)                    # Extra notes
+    common_duration = Field(str, default=None)
+    triggers = Field(list, default=[])
+    notes = Field(str, default=None)
 
 
 class NextQuestion(Fact):
