@@ -7,6 +7,7 @@ import tempfile
 import queue
 from threading import Thread
 import datetime
+from AI.llm import explain_result_with_llm
 
 # Re-import all necessary Experta and ExpertSystem components
 from experta import Fact
@@ -761,6 +762,20 @@ class ModernFreshDermatologyGUI:
                 self.results_text.insert(
                     tk.END, f"    Reasoning: {reasoning}\n")
             self.results_text.insert(tk.END, "\n")
+
+            # --- LLM Explanation ---
+            # Build the result string to explain
+            result_text = f"Primary Diagnosis: {disease}\nConfidence: {confidence:.1f}%\nReasoning: {reasoning}"
+
+            def insert_llm_explanation():
+                explanation = explain_result_with_llm(result_text)
+                self.results_text.config(state='normal')
+                self.results_text.insert(
+                    tk.END, "\n🤖 AI Explanation:\n" + explanation + "\n")
+                self.results_text.config(state='disabled')
+
+            # Run in a thread so GUI doesn't freeze
+            Thread(target=insert_llm_explanation).start()
         else:
             self.show_no_diagnosis_message()
 
