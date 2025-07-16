@@ -1,30 +1,14 @@
-# llm.py
+import os
+from huggingface_hub import InferenceClient
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 
-# ======== CONFIG ========
-MODEL_PATH = "AI/DialoGPT-medium"
 
-# ======== LOAD MODEL ========
-print("Loading model...")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-model = AutoModelForCausalLM.from_pretrained(MODEL_PATH)
-
-generator = pipeline(
-    "text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    device=0 if model.device.type == "cuda" else -1,
-)
-
-print("Model loaded successfully.")
-
-# ======== INFERENCE FUNCTION ========
 
 
 def explain_result_with_llm(result_text: str) -> str:
     """
-    Generate a user-friendly explanation for the given result.
+    Generate a user-friendly explanation for the given result by calling DeepSeek-R1 model
+    via Hugging Face Inference API.
 
     Args:
         result_text (str): The raw output from the expert system.
@@ -35,18 +19,17 @@ def explain_result_with_llm(result_text: str) -> str:
     prompt = f"Explain this diagnosis in simple terms for a non-expert:\n{result_text}\nExplanation:"
 
     try:
-        outputs = generator(
-            prompt,
-            max_length=200,
+        completion = client.chat.completions.create(
+            model="deepseek-ai/DeepSeek-R1",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200,
             temperature=0.7,
-            do_sample=True,
             top_p=0.9,
-            num_return_sequences=1
+            n=1,
         )
-
-        generated = outputs[0]['generated_text']
-        # Remove the prompt from the output
-        explanation = generated.replace(prompt, '').strip()
+        explanation = completion.choices[0].message.content.strip()
         return explanation
 
     except Exception as e:
@@ -60,6 +43,6 @@ if __name__ == "__main__":
 📋 Primary Diagnosis: Lipoma
     Confidence: 78.8%
     Reasoning: Soft lump is characteristic of lipoma.
-        """
+    """
     explanation = explain_result_with_llm(test_result)
     print("\nGenerated Explanation:\n", explanation)
