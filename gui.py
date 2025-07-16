@@ -774,8 +774,9 @@ class ModernFreshDermatologyGUI:
                     tk.END, "\n🤖 AI Explanation:\n" + explanation + "\n")
                 self.results_text.config(state='disabled')
 
-            # Run in a thread so GUI doesn't freeze
-            Thread(target=insert_llm_explanation).start()
+            insert_llm_explanation()
+            # # Run in a thread so GUI doesn't freeze
+            # Thread(target=insert_llm_explanation).start()
         else:
             self.show_no_diagnosis_message()
 
