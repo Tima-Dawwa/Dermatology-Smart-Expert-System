@@ -6,6 +6,7 @@ const ResultsPage = ({
   saveResults,
   printResults,
   resultsTextRef,
+  showReview,
 }) => {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 via-indigo-100 to-pink-100 px-2 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-16">
@@ -69,6 +70,14 @@ const ResultsPage = ({
           >
             <Printer className="w-5 h-5" />
             <span>Print Results</span>
+          </button>
+
+          <button
+            onClick={showReview}
+            className="flex items-center space-x-2 px-6 py-3 bg-yellow-500 text-white font-semibold rounded-xl hover:bg-yellow-600 transition-all transform hover:scale-105"
+          >
+            <FileText className="w-5 h-5" />
+            <span>Review Session</span>
           </button>
         </div>
       </div>
