@@ -62,6 +62,15 @@ def apply_diagnostic_rules(cls):
         ))
     cls.diagnose_melanoma = diagnose_melanoma
 
+    @Rule(NOT(Stop()), Answer(ident='has_symptom_sore_that_wont_heal', text='no'))
+    def diagnose_seborrheic_dermatitis(self):
+        self.declare(Diagnosis(
+            disease='Seborrheic Dermatitis',
+            reasoning="scaly patches without non-healing sores",
+            cf=0.7
+        ))
+    cls.diagnose_seborrheic_dermatitis = diagnose_seborrheic_dermatitis
+
     @Rule(NOT(Stop()), Answer(ident='has_symptom_sore_that_wont_heal', text='yes'), Answer(ident='has_symptom_persistent_scaly_patch', text='yes'))
     def diagnose_scc(self):
         self.declare(Diagnosis(
