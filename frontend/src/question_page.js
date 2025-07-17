@@ -14,7 +14,7 @@ const QuestionPage = ({
   submitAnswer,
 }) => {
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-8 lg:py-12">
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 via-indigo-100 to-pink-100 px-2 sm:px-4 lg:px-8 py-4 sm:py-8 lg:py-12">
       <div className="w-full max-w-3xl flex-1 flex flex-col justify-center">
         {/* Progress Header */}
         <div className="text-center mb-6 sm:mb-8">
