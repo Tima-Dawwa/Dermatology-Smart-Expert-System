@@ -1,18 +1,49 @@
 import { ChevronRight } from "lucide-react";
+import React from "react"; // Added missing import
 
 const QuestionPage = ({
   currentQuestion,
-  questionIndex,
-  mockQuestions,
   isProcessing,
-  inputValue,
-  setInputValue,
-  selectedChoice,
-  setSelectedChoice,
-  selectedMultiple,
-  handleMultipleChoice,
   submitAnswer,
 }) => {
+  // Local state for answer input
+  const [inputValue, setInputValue] = React.useState("");
+  const [selectedChoice, setSelectedChoice] = React.useState("");
+  const [selectedMultiple, setSelectedMultiple] = React.useState([]);
+
+  // Reset input when question changes
+  React.useEffect(() => {
+    setInputValue("");
+    setSelectedChoice("");
+    setSelectedMultiple([]);
+  }, [currentQuestion]);
+
+  if (!currentQuestion) {
+    return null;
+  }
+
+  // Handler for answer submission
+  const handleSubmit = () => {
+    let answer;
+    if (currentQuestion.question_type === "number") {
+      answer = inputValue;
+    } else if (currentQuestion.is_multiple_choice) {
+      answer = selectedMultiple.join(","); // Always send string
+    } else {
+      answer = selectedChoice;
+    }
+    submitAnswer(answer);
+  };
+
+  // Handler for multiple choice
+  const handleMultipleChoice = (option) => {
+    setSelectedMultiple((prev) =>
+      prev.includes(option)
+        ? prev.filter((o) => o !== option)
+        : [...prev, option]
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 via-indigo-100 to-pink-100 px-2 sm:px-4 lg:px-8 py-4 sm:py-8 lg:py-12">
       <div className="w-full max-w-3xl flex-1 flex flex-col justify-center">
@@ -26,20 +57,16 @@ const QuestionPage = ({
           </p>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Bar (static, since we don't know total) */}
         <div className="bg-gray-50 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-sm">
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-sm font-semibold text-gray-700">Progress</span>
-            <span className="text-sm text-gray-500">
-              {questionIndex + 1} of {mockQuestions.length}
-            </span>
+            <span className="text-sm text-gray-500">Question</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div
               className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-500"
-              style={{
-                width: `${((questionIndex + 1) / mockQuestions.length) * 100}%`,
-              }}
+              style={{ width: `30%` }}
             />
           </div>
           {isProcessing && (
@@ -55,7 +82,7 @@ const QuestionPage = ({
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 sm:px-8 py-4 sm:py-6">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">{questionIndex + 1}</span>
+                <span className="text-white font-bold">?</span>
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-white">
                 Assessment Question
@@ -67,13 +94,13 @@ const QuestionPage = ({
             {/* Question Text */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-xl mb-6 sm:mb-8 border border-blue-100">
               <p className="text-base sm:text-lg text-gray-800 leading-relaxed">
-                {currentQuestion?.text}
+                {currentQuestion?.question_text}
               </p>
             </div>
 
             {/* Answer Options */}
             <div className="space-y-5 sm:space-y-6">
-              {currentQuestion?.type === "number" ? (
+              {currentQuestion?.question_type === "number" ? (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Please enter a numerical value:
@@ -89,16 +116,16 @@ const QuestionPage = ({
               ) : (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    {currentQuestion?.allowMultiple
+                    {currentQuestion?.is_multiple_choice
                       ? "Select all that apply:"
                       : "Select your answer:"}
                   </label>
                   <div className="grid gap-2 sm:gap-3">
-                    {currentQuestion?.options?.map((option, index) => (
+                    {currentQuestion?.valid_responses?.map((option, index) => (
                       <div
                         key={index}
                         className={`p-3 sm:p-4 rounded-xl border-2 transition-all cursor-pointer hover:bg-gray-50 ${
-                          currentQuestion.allowMultiple
+                          currentQuestion.is_multiple_choice
                             ? selectedMultiple.includes(option)
                               ? "border-indigo-500 bg-indigo-50"
                               : "border-gray-200"
@@ -107,7 +134,7 @@ const QuestionPage = ({
                             : "border-gray-200"
                         }`}
                         onClick={() => {
-                          if (currentQuestion.allowMultiple) {
+                          if (currentQuestion.is_multiple_choice) {
                             handleMultipleChoice(option);
                           } else {
                             setSelectedChoice(option);
@@ -115,7 +142,7 @@ const QuestionPage = ({
                         }}
                       >
                         <div className="flex items-center space-x-3">
-                          {currentQuestion.allowMultiple ? (
+                          {currentQuestion.is_multiple_choice ? (
                             <input
                               type="checkbox"
                               checked={selectedMultiple.includes(option)}
@@ -144,7 +171,7 @@ const QuestionPage = ({
 
               <div className="pt-2 sm:pt-4">
                 <button
-                  onClick={submitAnswer}
+                  onClick={handleSubmit}
                   disabled={isProcessing}
                   className="w-full flex items-center justify-center space-x-3 px-8 py-3 sm:py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base sm:text-lg"
                 >
