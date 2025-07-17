@@ -2,7 +2,7 @@ import React from "react";
 import { useBackend } from "./api/BackendContext";
 import { ArrowLeft } from "lucide-react";
 
-const SessionReviewPage = () => {
+const SessionReviewPage = ({ goBack }) => {
   const { answers, diagnosis } = useBackend();
 
   return (
@@ -11,7 +11,7 @@ const SessionReviewPage = () => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">🧾 Session Review</h2>
           <button
-            onClick={()=>{}}
+            onClick={goBack}
             className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 transition"
           >
             <ArrowLeft className="w-4 h-4" />

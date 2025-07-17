@@ -2,8 +2,9 @@ import "./App.css";
 import WelcomePage from "./welcome_page";
 import QuestionPage from "./question_page";
 import ResultsPage from "./result_page";
-import SessionReviewPage  from "./session_review";
+import SessionReviewPage from "./session_review";
 import { BackendProvider, useBackend } from "./api/BackendContext";
+import { useState, useEffect } from "react";
 
 function MainApp() {
   const {
@@ -16,15 +17,30 @@ function MainApp() {
     resetSession,
   } = useBackend();
 
-  // Navigation logic
-  let page = "welcome";
-  if (sessionId && currentQuestion) page = "question";
-  if (sessionId && diagnosis) page = "result";
+  const [page, setPage] = useState("welcome");
 
-  // Handlers
+  useEffect(() => {
+    if (!sessionId) {
+      setPage("welcome");
+    } else if (diagnosis) {
+      setPage("result");
+    } else if (currentQuestion) {
+      setPage("question");
+    }
+  }, [sessionId, diagnosis, currentQuestion]);
+
   const handleStart = () => createSession();
   const handleSubmitAnswer = (answer) => submitAnswer(answer);
-  const handleReset = () => resetSession();
+  const handleReset = () => {
+    resetSession();
+    setPage("welcome");
+  };
+  const handleShowReview = () => {
+    setPage("session_review");
+  };
+  const handleBackToResults = () => {
+  setPage("result");
+  };
 
   return (
     <div className="App">
@@ -45,8 +61,11 @@ function MainApp() {
           saveResults={() => {}}
           printResults={() => {}}
           resultsTextRef={null}
-          showReview={() => {}} // here is the logic of the button , it have to navigate to review page
+          showReview={handleShowReview}
         />
+      )}
+      {page === "session_review" && (
+        <SessionReviewPage goBack={handleBackToResults}/>
       )}
     </div>
   );
