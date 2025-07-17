@@ -17,7 +17,7 @@ const featureVariants = {
 
 const WelcomePage = ({ startDiagnosis, isProcessing }) => {
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white to-blue-50 px-2 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 via-indigo-100 to-pink-100 px-2 sm:px-6 lg:px-8">
       <div className="w-full max-w-7xl flex-1 flex flex-col justify-center">
         {/* Hero Section */}
         <div className="text-center mb-8 sm:mb-12 lg:mb-16">
