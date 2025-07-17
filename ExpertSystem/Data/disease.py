@@ -221,6 +221,24 @@ diseases = [
         notes="Benign, non-cancerous growth. Often mistaken for melanoma due to its dark, irregular appearance.",
     ),
     DiseaseInfo(
+        name="Seborrheic Dermatitis",
+        common_symptoms={
+            "scaly_patch": "high",
+            "itching": "high",
+            "redness": "medium",
+            "greasy_appearance": "medium"
+        },
+        age_min=0, age_max=100,
+        common_locations=["scalp", "face", "ears", "chest", "upper back"],
+        severity_levels=["mild", "moderate"],
+        common_duration="chronic with flare-ups",
+        triggers=["stress", "cold_weather",
+                  "hormonal_changes", "Malassezia yeast"],
+        common_treatments=["medicated_shampoos",
+                           "topical_steroids", "antifungal_creams"],
+        notes="A chronic inflammatory skin condition. Not contagious and not related to poor hygiene. Often confused with psoriasis or eczema."
+    ),
+    DiseaseInfo(
         name="Lipoma",
         common_symptoms={"soft_lump": "high",
                          "slow_growth": "high", "movable_under_skin": "high"},
