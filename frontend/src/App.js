@@ -2,6 +2,7 @@ import "./App.css";
 import WelcomePage from "./welcome_page";
 import QuestionPage from "./question_page";
 import ResultsPage from "./result_page";
+import SessionReviewPage  from "./session_review";
 import { BackendProvider, useBackend } from "./api/BackendContext";
 
 function MainApp() {
@@ -44,6 +45,7 @@ function MainApp() {
           saveResults={() => {}}
           printResults={() => {}}
           resultsTextRef={null}
+          showReview={() => {}} // here is the logic of the button , it have to navigate to review page
         />
       )}
     </div>
