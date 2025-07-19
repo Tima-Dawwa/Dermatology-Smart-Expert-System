@@ -22,31 +22,26 @@ const SessionReviewPage = ({ goBack }) => {
         {diagnosis && (
           <div className="bg-green-100 border-l-4 border-green-400 p-4 rounded mb-6">
             <h3 className="text-lg font-semibold text-green-800">
-              Final Diagnosis: {diagnosis.disease}
+              Final Diagnosis: {diagnosis.diagnosis.disease}
             </h3>
             {(() => {
-      const reasoning = diagnosis.reasoning || "";
-      const lines = reasoning.split(";");
-      const firstLine = lines[0];
-      const penaltyLines = lines.slice(1);
-
-      return (
-        <div className="text-sm text-green-700 space-y-1 mt-1">
+            const reasoning = diagnosis.reasoning || "";
+            const lines = reasoning.split(";");
+            const firstLine = lines[0];
+            return (
+          <div className="text-sm text-green-700 space-y-1 mt-1">
           <div><strong>Confidence:</strong> {(diagnosis.confidence).toFixed(2)}%</div>
           <div> {firstLine.trim()}</div>
-          {penaltyLines.map((line, i) => (
-            <div key={i}> {line.trim()}</div>
-          ))}
-        </div>
-      );
-    })()}
-            
+          </div>
+          );
+          })()}
           </div>
         )}
+
         <div className="space-y-5">
           {answers.length > 0 ? (
             answers.map((entry, index) => (
-              <div key={index} className="border-l-4 border-blue-500 pl-4">
+              <div key={index} className="bg-blue-50 border-l-4 border-blue-500 pl-4 rounded mb-6">
                 <p className="font-semibold text-gray-900">
                   {index + 1}. {entry.question.question_text }
                 </p>
