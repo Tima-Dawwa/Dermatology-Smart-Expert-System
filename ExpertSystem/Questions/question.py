@@ -26,7 +26,6 @@ ALL_SYMPTOMS = sorted(list(set([
     "transverse_nail_grooves"
 ])))
 
-# This list contains every unique trigger gathered from the disease information.
 ALL_TRIGGERS = sorted(list(set([
     'actinic_keratosis', 'age', 'aging', 'alcohol', 'allergens', 'antibiotics',
     'autoimmune', 'autoimmune_reaction', 'bacteria', 'birth_control_pills',
@@ -44,10 +43,7 @@ ALL_TRIGGERS = sorted(list(set([
     'viral_infection', 'warm_moist_environments', 'weakened_immunity'
 ])))
 
-
-# --- Comprehensive List of All Questions ---
 questions_list = [
-    # --- Demographic and Foundational Questions ---
     question(
         ident='age',
         text='What is your age?',
@@ -84,9 +80,7 @@ questions_list = [
     ),
 ]
 
-# --- Dynamically Generated Yes/No Question for Every Symptom ---
 for symptom in ALL_SYMPTOMS:
-    # Create a user-friendly version of the symptom for the question text
     symptom_text = symptom.replace('_', ' ')
 
     questions_list.append(
@@ -98,7 +92,6 @@ for symptom in ALL_SYMPTOMS:
         )
     )
 
-# --- Concluding Multi-Select Question for Triggers ---
 questions_list.append(
     question(
         ident='triggers',
@@ -120,9 +113,7 @@ questions_list.append(
              text="Did the rash appear after starting a new medication?", valid=['yes', 'no'], Type='multi'),
 )
 
-# Helper to get questions data fast
 question_lookup = {q['ident']: q for q in questions_list}
-
 
 def get_question_by_ident(ident):
     return question_lookup.get(ident)

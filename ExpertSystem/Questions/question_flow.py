@@ -3,12 +3,7 @@ from ExpertSystem.facts import Answer, NextQuestion
 
 
 def apply_question_flow(cls):
-    """
-    This function contains all the rules for asking questions and applies them
-    to the provided KnowledgeEngine class. It perfectly follows the decision tree.
-    """
-
-    # Add this new rule at the beginning of the function
+    
     @Rule(Fact(start=True), salience=103)
     def ask_age(self):
         self.declare(NextQuestion(ident='age'))
@@ -24,7 +19,6 @@ def apply_question_flow(cls):
         self.declare(NextQuestion(ident='severity'))
     cls.ask_severity = ask_severity
 
-    # --- Step 1: Triage ---
     @Rule(Answer(ident='severity'), NOT(Answer(ident='has_symptom_lump_or_growth')), salience=100)
     def ask_triage_1(self):
         self.declare(NextQuestion(ident='has_symptom_lump_or_growth'))
@@ -53,8 +47,8 @@ def apply_question_flow(cls):
         self.declare(NextQuestion(ident='has_symptom_palpable_purpura'))
     cls.ask_triage_4_branch_d = ask_triage_4_branch_d
 
-    # --- Branch A: Growths ---
 
+    # --- Branch A: Growths ---
     @Rule(Answer(ident='has_symptom_lump_or_growth', text='yes'), NOT(Answer(ident='has_symptom_soft_lump')), salience=90)
     def ask_a1(self):
         self.declare(NextQuestion(ident='has_symptom_soft_lump'))
@@ -90,8 +84,8 @@ def apply_question_flow(cls):
         NextQuestion(ident='has_symptom_persistent_scaly_patch'))
     cls.ask_a7_followup1 = ask_a7_followup1
 
-    # --- Branch B: Hair & Nails ---
 
+    # --- Branch B: Hair & Nails ---
     @Rule(Answer(ident='affects_nails_or_hair', text='yes'), NOT(Answer(ident='has_symptom_patchy_hair_loss')), salience=90)
     def ask_b1(self): self.declare(NextQuestion(
         ident='has_symptom_patchy_hair_loss'))
@@ -121,6 +115,7 @@ def apply_question_flow(cls):
     def ask_b6(self): self.declare(NextQuestion(
         ident='has_symptom_transverse_nail_grooves'))
     cls.ask_b6 = ask_b6
+
 
     # --- Branch C: Rashes ---
     @Rule(Answer(ident='has_symptom_rash', text='yes'), NOT(Answer(ident='has_symptom_itching')), salience=90)
@@ -222,6 +217,7 @@ def apply_question_flow(cls):
     def ask_c3_7_trigger(self): self.declare(
         NextQuestion(ident='trigger_medications'))
     cls.ask_c3_7_trigger = ask_c3_7_trigger
+
 
     # --- Branch D: Other conditions ---
     @Rule(Answer(ident='has_symptom_palpable_purpura', text='no'), NOT(Answer(ident='has_symptom_loss_of_pigment')), salience=50)

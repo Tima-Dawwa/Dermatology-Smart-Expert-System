@@ -3,10 +3,7 @@ from ExpertSystem.facts import Answer, Stop, Diagnosis
 
 
 def apply_diagnostic_rules(cls):
-    """
-    This function applies all 37 diagnostic rules to the KnowledgeEngine class.
-    """
-
+    
     # --- Branch A Diagnoses ---
     @Rule(NOT(Stop()), Answer(ident='has_symptom_lump_or_growth', text='yes'), Answer(ident='has_symptom_soft_lump', text='yes'), salience=100)
     def diagnose_lipoma(self):
@@ -80,6 +77,7 @@ def apply_diagnostic_rules(cls):
         ))
     cls.diagnose_scc = diagnose_scc
 
+
     # --- Branch B Diagnoses ---
     @Rule(NOT(Stop()), Answer(ident='affects_nails_or_hair', text='yes'), Answer(ident='has_symptom_patchy_hair_loss', text='yes'))
     def diagnose_alopecia_areata(self):
@@ -135,6 +133,7 @@ def apply_diagnostic_rules(cls):
         ))
     cls.diagnose_beaus_lines = diagnose_beaus_lines
 
+
     # --- Branch C Diagnoses ---
     @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_worse_at_night', text='yes'))
     def diagnose_scabies(self):
@@ -145,7 +144,6 @@ def apply_diagnostic_rules(cls):
         ))
     cls.diagnose_scabies = diagnose_scabies
 
-    # Eczema - Multiple rules for different aspects
     @Rule(NOT(Stop()), Answer(ident='has_symptom_rash', text='yes'), Answer(ident='has_symptom_itching', text='yes'), Answer(ident='has_symptom_dryness', text='yes'))
     def diagnose_eczema_primary(self):
         self.declare(Diagnosis(
@@ -210,7 +208,6 @@ def apply_diagnostic_rules(cls):
         ))
     cls.diagnose_candidiasis = diagnose_candidiasis
 
-    # Contact Dermatitis - Multiple rules for different aspects
     @Rule(NOT(Stop()), Answer(ident='trigger_contact_related', text='yes'))
     def diagnose_contact_dermatitis_primary(self):
         self.declare(Diagnosis(
@@ -257,7 +254,6 @@ def apply_diagnostic_rules(cls):
         ))
     cls.diagnose_bullous_pemphigoid = diagnose_bullous_pemphigoid
 
-    # Psoriasis - Multiple rules for different aspects
     @Rule(NOT(Stop()), Answer(ident='has_symptom_thick_patches', text='yes'))
     def diagnose_psoriasis_primary(self):
         self.declare(Diagnosis(
@@ -366,6 +362,7 @@ def apply_diagnostic_rules(cls):
             cf=0.8
         ))
     cls.diagnose_drug_rash = diagnose_drug_rash
+
 
     # --- Branch D Diagnoses ---
     @Rule(NOT(Stop()), Answer(ident='has_symptom_palpable_purpura', text='yes'))
