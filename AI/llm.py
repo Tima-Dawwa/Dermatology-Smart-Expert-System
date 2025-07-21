@@ -2,6 +2,8 @@ import os
 from huggingface_hub import InferenceClient
 
 
+
+
 def explain_result_with_llm(result_text: str) -> str:
     prompt = f"""You are a helpful assistant that explains medical diagnoses to patients.
 
