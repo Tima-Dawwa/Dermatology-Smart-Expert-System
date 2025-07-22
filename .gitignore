@@ -1,0 +1,8 @@
+__pycache__/test.cpython-313.pyc
+AI/__pycache__/llm.cpython-313.pyc
+ExpertSystem/__pycache__/engine.cpython-313.pyc
+ExpertSystem/__pycache__/facts.cpython-313.pyc
+ExpertSystem/Data/__pycache__/disease.cpython-313.pyc
+ExpertSystem/Questions/__pycache__/diagnosis.cpython-313.pyc
+ExpertSystem/Questions/__pycache__/question_flow.cpython-313.pyc
+ExpertSystem/Questions/__pycache__/question.cpython-313.pyc
